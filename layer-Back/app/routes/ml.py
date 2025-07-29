@@ -11,9 +11,9 @@ from app.security.security import get_current_user
 from app.models.cases import CaseModel, DocumentModel
 from app.models.user import User
 from app.core.weaviate_client import ensure_schema, client
-from app.ml.embedding_pipeline import index_full_document
-from app.ml.embedding_pipeline import search_similar_chunks
-from app.ml.pipeline import answer_query
+from app.ml.Embed.embedding_pipeline import index_full_document
+from app.ml.Embed.embedding_pipeline import search_similar_chunks
+from app.ml.Generation.pipeline import answer_query
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,43 +76,51 @@ async def upload_documents(
 
     processed_files = 0
     documents = []
+
     for file in files:
         try:
             content = await file.read()
             text = extract_text(file, content)
 
-            # Индексация в Weaviate
-            index_full_document(
-                title=file.filename,
-                text=text,
-                filetype=file.content_type,
-                case_id=case.id
-            )
-
-            # Подготовка документа для БД
+            # 🧩 Сначала создаём документ в БД, чтобы получить document.id
             document = DocumentModel(
                 title=file.filename,
                 filetype=file.content_type,
                 created_at=datetime.utcnow(),
                 case_id=case.id
             )
+            db.add(document)
+            db.flush()  # ← Сохраняет в БД без коммита, генерирует `document.id`
+
+            # ✅ Индексация в Weaviate
+            index_full_document(
+                title=file.filename,
+                text=text,
+                filetype=file.content_type,
+                case_id=case.id,
+                document_id=document.id  # ← Теперь передаётся ID
+            )
+
             documents.append(document)
             processed_files += 1
+
         except Exception as e:
-            logger.error(f"Ошибка обработки файла {file.filename}: {str(e)}")
+            logger.error(f"❌ Ошибка обработки файла {file.filename}: {str(e)}")
+            db.rollback()
             continue
 
-    # Сохранение всех документов одним коммитом
+    # ✅ Финальный коммит
     try:
-        db.add_all(documents)
         db.commit()
     except Exception as e:
-        logger.error(f"Ошибка при сохранении в БД: {str(e)}")
+        logger.error(f"❌ Ошибка при сохранении в БД: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=500, detail="Ошибка сохранения в БД")
 
     return {"message": f"Загружено {processed_files} из {len(files)} документов успешно"}
 
-@router.get("/cases/{case_id}/search")
+
+@router.get("/cases/{case_id}/search_changs")
 async def semantic_search(
     case_id: int,
     q: str = Query(..., description="Ваш поисковый запрос"),

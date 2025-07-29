@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from app.ml.embedding_pipeline import search_similar_chunks
+from app.ml.Embed.embedding_pipeline import search_similar_chunks
 from app.models.user import User
 from app.security.security import get_current_user
 

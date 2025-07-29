@@ -1,5 +1,5 @@
-from app.ml.embedding_pipeline import search_similar_chunks
-from app.ml.generator import generate_answer
+from app.ml.Embed.embedding_pipeline import search_similar_chunks
+from app.ml.Generation.generator import generate_answer
 import logging
 
 logger = logging.getLogger(__name__)

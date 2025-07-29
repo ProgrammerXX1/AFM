@@ -9,3 +9,4 @@ python-multipart
 pymupdf
 weaviate-client
 python-dotenv
+numpy

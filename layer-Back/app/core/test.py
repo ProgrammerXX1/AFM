@@ -1,16 +1,41 @@
-import weaviate
+from app.core.weaviate_client import client
+import logging
 
-client = weaviate.Client("http://localhost:8080")
+logger = logging.getLogger(__name__)
 
-doc_id = "31abeb45-c453-4615-b56f-f314907e6323"
+def clear_weaviate_documents():
+    """Удаляет ВСЕ объекты из коллекции 'Document' по UUID."""
+    try:
+        if not client.is_connected():
+            logger.info("🔌 Подключаемся к Weaviate...")
+            client.connect()
 
-exists = client.data_object.exists(doc_id)
-if exists:
-    print("✅ Объект найден")
+        collection = client.collections.get("Document")
 
-    obj = client.data_object.get_by_id(doc_id)
-    print("📎 UUID:", doc_id)
-    print("📚 Properties:", obj.get("properties", {}))
-    print("📊 Вектор:", obj.get("vector", None))
-else:
-    print("❌ Нет такого объекта")
+        logger.info("📥 Получаем список всех объектов в коллекции...")
+        all_objects = collection.query.fetch_objects(limit=9999)
+
+        if not all_objects.objects:
+            logger.info("ℹ️ Коллекция уже пуста.")
+            return 0
+
+        deleted_count = 0
+        for obj in all_objects.objects:
+            try:
+                collection.data.delete_by_id(obj.uuid)
+                logger.info(f"🗑️ Удалён: {obj.uuid}")
+                deleted_count += 1
+            except Exception as e:
+                logger.warning(f"⚠️ Не удалось удалить {obj.uuid}: {e}")
+
+        logger.info(f"✅ Всего удалено: {deleted_count}")
+        return deleted_count
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка при очистке Weaviate: {e}")
+        return 0
+
+
+if __name__ == "__main__":
+    deleted = clear_weaviate_documents()
+    print(f"✅ Удалено: {deleted}")

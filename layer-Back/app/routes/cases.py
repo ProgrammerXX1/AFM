@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.core.weaviate_client import client
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.orm import Session, load_only
 from typing import List
@@ -9,15 +10,17 @@ from app.db.database import get_db
 from app.security.security import get_current_user
 
 from app.models.user import User
-import fitz  # pymupdf
 
+import logging
+logger = logging.getLogger(__name__)
 router = APIRouter()
-
+from weaviate.classes.query import Filter
 @router.get("/cases/first/documents", response_model=List[CaseDocumentPreview], tags=["Cases"])
 def get_first_case_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    
     first_case = db.query(CaseModel).filter(
         CaseModel.user_id == current_user.id
     ).order_by(CaseModel.id.asc()).first()
@@ -46,7 +49,6 @@ def get_short_cases(
     ).all()
     return cases
 
-
 @router.get("/cases/{case_id}", response_model=CaseOut, tags=["Cases"])
 def get_case(
     case_id: int,
@@ -62,7 +64,6 @@ def get_case(
     if not case:
         raise HTTPException(status_code=404, detail="Дело не найдено")
     return case
-
 
 @router.post("/cases", response_model=CaseOut, tags=["Cases"])
 def create_case(
@@ -105,18 +106,26 @@ def delete_document(
     if not document:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
-    # Удаление из Weaviate
+    # ✅ Удаление всех чанков из Weaviate по document_id
     try:
-        from app.ml.weaviate_client import delete_from_weaviate
-        delete_from_weaviate(document.weaviate_id)
-    except Exception as e:
-        print(f"⚠️ Ошибка удаления из Weaviate: {e}")
+        if not client.is_connected():
+            client.connect()
 
+        collection = client.collections.get("Document")
+        where_filter = Filter.by_property("document_id").equal(document.id)
+        delete_result = collection.data.delete_many(where=where_filter)
+        logger.info(f"🗑️ Удалено чанков Weaviate: {delete_result.matches}")
+
+
+    except Exception as e:
+        logger.warning(f"⚠️ Ошибка удаления чанков из Weaviate: {e}")
+
+    # Удаление документа из базы
     db.delete(document)
     db.commit()
-    return {"message": "Документ удален"}
- 
- 
+
+    return {"message": "Документ и его чанки удалены"}
+
 
 @router.put("/documents/{doc_id}", response_model=DocumentOut)
 def update_document(
