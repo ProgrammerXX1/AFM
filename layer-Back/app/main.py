@@ -2,19 +2,36 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordBearer
+from app.core.weaviate_client import initialize_weaviate
+from contextlib import asynccontextmanager
 
+import logging
 import warnings
+
 warnings.filterwarnings("ignore", message="Protobuf gencode version .* is exactly one major version older.*")
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()]
+)
 
+logger = logging.getLogger(__name__)
 app = FastAPI()
-
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Код, выполняемый при старте приложения
+    logger.info("Инициализация приложения...")
+    initialize_weaviate()
+    yield
+    # Код, выполняемый при завершении приложения
+    logger.info("Завершение работы приложения...")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")  # важно
 
 # Добавь роуты после инициализации приложения
-from app.routes import auth, cases, upload, ml
+from app.routes import auth, cases, ml
 app.include_router(auth.router, tags=["Auth"])
 app.include_router(cases.router, tags=["Cases"])
-app.include_router(upload.router, tags=["Upload"])
 app.include_router(ml.router, tags=["ML"])
 # Настройка CORS (опционально, если фронт подключаешь)
 app.add_middleware(

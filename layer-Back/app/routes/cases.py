@@ -53,6 +53,7 @@ def get_case(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    
     case = db.query(CaseModel).filter(
         CaseModel.id == case_id,
         CaseModel.user_id == current_user.id
@@ -106,7 +107,7 @@ def delete_document(
 
     # Удаление из Weaviate
     try:
-        from app.routes.upload import delete_from_weaviate
+        from app.ml.weaviate_client import delete_from_weaviate
         delete_from_weaviate(document.weaviate_id)
     except Exception as e:
         print(f"⚠️ Ошибка удаления из Weaviate: {e}")
