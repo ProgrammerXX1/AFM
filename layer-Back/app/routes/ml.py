@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from pydantic import BaseModel, ConfigDict
 import fitz  # PyMuPDF
@@ -82,23 +82,24 @@ async def upload_documents(
             content = await file.read()
             text = extract_text(file, content)
 
-            # 🧩 Сначала создаём документ в БД, чтобы получить document.id
+            # 🧩 Создание записи в БД
             document = DocumentModel(
                 title=file.filename,
                 filetype=file.content_type,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 case_id=case.id
             )
             db.add(document)
-            db.flush()  # ← Сохраняет в БД без коммита, генерирует `document.id`
+            db.flush()  # ← Получаем document.id
 
-            # ✅ Индексация в Weaviate
+            # ✅ Индексация чанков с учётом user_id и case_id
             index_full_document(
                 title=file.filename,
                 text=text,
                 filetype=file.content_type,
+                user_id=current_user.id,
                 case_id=case.id,
-                document_id=document.id  # ← Теперь передаётся ID
+                document_id=document.id
             )
 
             documents.append(document)
@@ -128,7 +129,7 @@ async def semantic_search(
 ):
     try:
         logger.info(f"🔎 Запрос: '{q}' для дела #{case_id}")
-        results = search_similar_chunks(query=q, case_id=case_id, k=10)
+        results = search_similar_chunks(query=q, case_id=case_id, k=5)
         return {"results": results}
     except Exception as e:
         logger.exception("❌ Ошибка при выполнении семантического поиска")
@@ -140,14 +141,25 @@ class QuestionRequest(BaseModel):
 class AnswerResponse(BaseModel):
     answer: str
 
-@router.post("/ask/{case_id}", response_model=AnswerResponse)
+@router.post("/ask/{case_id}")
 async def ask(case_id: int, request: QuestionRequest):
     """
     Генерация юридического ответа на вопрос по делу с заданным case_id.
+    Возвращает структуру, подходящую под documentSections.
     """
     try:
-        answer = answer_query(case_id, request.question)
-        return {"answer": answer}
+        raw_answer = answer_query(case_id, request.question)
+
+        # Оборачиваем в documentSections-подобный массив
+        document_sections = [
+            {
+                "type": "paragraph",
+                "content": raw_answer
+            }
+        ]
+
+        return document_sections
+
     except Exception as e:
         logger.exception("Ошибка при генерации ответа")
         raise HTTPException(status_code=500, detail="Ошибка генерации ответа")

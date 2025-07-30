@@ -12,7 +12,7 @@ def truncate_context(text: str, limit: int = MAX_CONTEXT_CHARS) -> str:
 def answer_query(case_id: int, question: str) -> str:
     """Генерация ответа на вопрос на основе контекста из документов."""
     try:
-        docs = search_similar_chunks(question, case_id, k=5)
+        docs = search_similar_chunks(question, case_id, k=10)
         if not docs:
             return "❗Контекст не найден. Уточните вопрос или загрузите документы."
 

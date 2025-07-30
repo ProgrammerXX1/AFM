@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.db.database import Base
-from datetime import datetime
+from datetime import datetime, timezone
 
 class CaseModel(Base):
     __tablename__ = "cases"
@@ -41,6 +41,6 @@ class DocumentModel(Base):
     weaviate_id = Column(String, nullable=False)
     title = Column(String)
     filetype = Column(String)
-    created_at = Column(Date, default=datetime.utcnow)
+    created_at = Column(Date, default=datetime.now(timezone.utc))
 
     case = relationship("CaseModel", back_populates="documents")

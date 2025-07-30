@@ -1,18 +1,47 @@
 import re
-from app.ml.Embed.embedder import get_embedding
+import os
+import hashlib
 import numpy as np
+from numpy.linalg import norm
+from app.ml.Embed.embedder import get_embedding  # убедись, что путь корректен
 
+CACHE_DIR = "cache"
 
-def cosine_similarity(v1, v2):
-    return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+def get_cache_path(user_id: int, case_id: int, document_id: int) -> str:
+    return os.path.join(CACHE_DIR, str(user_id), str(case_id), f"{document_id}.txt")
+
+def hash_chunk(text: str) -> str:
+    return hashlib.sha256(text.strip().lower().encode()).hexdigest()
+
+def is_duplicate_chunk(text: str, user_id: int, case_id: int, document_id: int) -> bool:
+    h = hash_chunk(text)
+    path = get_cache_path(user_id, case_id, document_id)
+    if not os.path.exists(path):
+        return False
+    with open(path, "r", encoding="utf-8") as f:
+        return h in f.read()
+
+def mark_chunk_as_seen(text: str, user_id: int, case_id: int, document_id: int):
+    h = hash_chunk(text)
+    path = get_cache_path(user_id, case_id, document_id)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(h + "\n")
+
+def clear_seen_chunks(user_id: int, case_id: int, document_id: int):
+    path = get_cache_path(user_id, case_id, document_id)
+    if os.path.exists(path):
+        os.remove(path)
+
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    return float(np.dot(vec1, vec2) / (norm(vec1) * norm(vec2)))
 
 def extract_structure_blocks(text: str) -> list[str]:
-    """Разделение текста на логические блоки по юр. структуре: статьи, пункты, заголовки."""
     BLOCK_PATTERN = re.compile(r'''
         (?:(?:Статья|Пункт|Раздел|Глава)\s+\d+[а-яА-Я\.\-\d]*) |
         (?:^Протокол\s+от\s+\d{1,2}\.\d{2}\.\d{4}) |
         (?:Постановление\s+от\s+\d{1,2}\.\d{2}\.\d{4}) |
-        (?:^[А-ЯЁ][^\n]{0,80}\n)  # заголовки
+        (?:^[А-ЯЁ][^\n]{0,80}\n)
     ''', re.VERBOSE | re.MULTILINE)
 
     matches = list(BLOCK_PATTERN.finditer(text))
@@ -26,12 +55,9 @@ def extract_structure_blocks(text: str) -> list[str]:
             blocks.append(block)
     return blocks
 
-
-def merge_short_blocks(blocks: list[str], min_length: int = 300) -> list[str]:
-    """Объединение коротких чанков с предыдущими или следующими."""
+def merge_short_blocks(blocks: list[str], min_length: int = 150) -> list[str]:
     merged = []
     buffer = ""
-
     for block in blocks:
         if len(block) < min_length:
             buffer += " " + block
@@ -40,21 +66,21 @@ def merge_short_blocks(blocks: list[str], min_length: int = 300) -> list[str]:
                 merged.append(buffer.strip())
                 buffer = ""
             merged.append(block)
-
     if buffer:
         merged.append(buffer.strip())
     return merged
 
-
 def post_split_cleaning(chunk: str) -> str:
-    """Очистка чанка от лишних переносов и пробелов."""
-    chunk = chunk.strip()
-    chunk = re.sub(r'\s+', ' ', chunk)
-    return chunk
+    return re.sub(r'\s+', ' ', chunk.strip())
 
-
-def smart_chunk_document(text: str, similarity_threshold: float = 0.95) -> list[str]:
-    """Умное чанкирование с удалением дубликатов по тексту и по смыслу (эмбеддингу)."""
+def smart_chunk_document(
+    text: str,
+    user_id: int,
+    case_id: int,
+    document_id: int,
+    similarity_threshold: float = 0.98,
+    global_dedup: bool = True
+) -> list[str]:
     blocks = extract_structure_blocks(text)
     blocks = merge_short_blocks(blocks)
     raw_chunks = [post_split_cleaning(b) for b in blocks if b.strip()]
@@ -65,31 +91,34 @@ def smart_chunk_document(text: str, similarity_threshold: float = 0.95) -> list[
 
     for chunk in raw_chunks:
         key = chunk.lower().strip()
-        
-        # 1. Фильтрация по тексту
+
         if key in seen_texts:
-            print(f"⏩ Пропущен дубликат текста.")
+            print("⏩ Пропущен дубликат текста.")
             continue
 
-        # 2. Семантическая фильтрация
+        if global_dedup and is_duplicate_chunk(chunk, user_id, case_id, document_id):
+            print("⏩ Пропущен глобальный дубликат.")
+            continue
+
         try:
             emb = get_embedding(chunk)
         except Exception as e:
-            print(f"⚠️ Проблема с эмбеддингом: {e}")
+            print(f"⚠️ Ошибка эмбеддинга: {e}")
             continue
 
-        is_similar = False
-        for existing_emb in seen_vectors:
-            if cosine_similarity(emb, existing_emb) > similarity_threshold:
-                is_similar = True
-                print(f"⏩ Пропущен семантический дубликат.")
-                break
-
+        is_similar = any(
+            cosine_similarity(emb, existing) > similarity_threshold
+            for existing in seen_vectors
+        )
         if is_similar:
+            print("⏩ Пропущен семантический дубликат.")
             continue
 
         seen_texts.add(key)
         seen_vectors.append(emb)
         unique_chunks.append(chunk)
+
+        if global_dedup:
+            mark_chunk_as_seen(chunk, user_id, case_id, document_id)
 
     return unique_chunks
