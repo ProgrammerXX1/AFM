@@ -3,7 +3,7 @@ import traceback
 
 from app.core.weaviate_client import save_to_weaviate, client
 from app.ml.Embed.embedder import get_embedding
-from app.ml.Embed.chunker import smart_chunk_document  # ← твой умный чанкер
+from app.ml.Embed.chunker import smart_chunk_document  # ✅ подключаем умный чанкер
 from weaviate.classes.query import Filter
 from app.ml.Embed.reranker import rerank_chunks  # ✅ подключаем локальный reranker
 
@@ -58,13 +58,15 @@ def search_similar_chunks(query: str, case_id: int, k: int = 5) -> list[dict]:
             logger.info("🔌 Подключаемся к Weaviate...")
             client.connect()
 
+        # 🔹 Получаем эмбеддинг запроса
         question_vector = get_embedding(query)
 
+        # 🔍 Запрос к Weaviate
         collection = client.collections.get("Document")
         result = collection.query.near_vector(
             near_vector=question_vector,
             filters=Filter.by_property("case_id").equal(case_id),
-            limit=15  # сначала забираем больше кандидатов
+            limit=15  # Берём больше кандидатов
         )
 
         raw_results = result.objects
@@ -72,17 +74,20 @@ def search_similar_chunks(query: str, case_id: int, k: int = 5) -> list[dict]:
             logger.warning(f"⚠️ Нет кандидатов по запросу: '{query}'")
             return []
 
-        # Собираем текстовые кандидаты
-        all_chunks = [obj.properties["text"] for obj in raw_results]
+        # 🧹 Удаление дубликатов по тексту
+        text_to_obj = {}
+        for obj in raw_results:
+            text = obj.properties.get("text")
+            if text and text not in text_to_obj:
+                text_to_obj[text] = obj.properties
 
-        # Пропускаем через reranker
-        top_chunks = rerank_chunks(query, all_chunks, top_k=k)
+        unique_texts = list(text_to_obj.keys())
 
-        # Оставляем только те, которые попали в топ
-        reranked_matches = [
-            obj.properties for obj in raw_results
-            if obj.properties["text"] in top_chunks
-        ]
+        # 🔁 Реранкинг по смыслу
+        top_chunks = rerank_chunks(query, unique_texts, top_k=k)
+
+        # 📎 Возврат отранжированных объектов
+        reranked_matches = [text_to_obj[text] for text in top_chunks if text in text_to_obj]
 
         logger.info(f"🔍 После reranking отобрано {len(reranked_matches)} чанков для запроса: '{query}'")
         return reranked_matches
@@ -90,4 +95,3 @@ def search_similar_chunks(query: str, case_id: int, k: int = 5) -> list[dict]:
     except Exception as e:
         logger.error(f"❌ Ошибка при поиске чанков: {str(e)}\n{traceback.format_exc()}")
         return []
-

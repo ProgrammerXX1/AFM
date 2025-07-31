@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Query, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 import fitz  # PyMuPDF
 import logging
-
+import json
 from app.db.database import get_db
 from app.security.security import get_current_user
 from app.models.cases import CaseModel, DocumentModel
@@ -14,7 +14,9 @@ from app.core.weaviate_client import ensure_schema, client
 from app.ml.Embed.embedding_pipeline import index_full_document
 from app.ml.Embed.embedding_pipeline import search_similar_chunks
 from app.ml.Generation.pipeline import answer_query
-
+from app.ml.Generation.generator import generate_answer
+from sqlalchemy import text
+from app.ml.Embed.reranker import rerank_chunks
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -141,25 +143,63 @@ class QuestionRequest(BaseModel):
 class AnswerResponse(BaseModel):
     answer: str
 
+def truncate_context(context: str, max_chars: int = 16000) -> str:
+    """Обрезает текст до лимита символов (подходит для LLaMA 7B в Q4/Q5)."""
+    if len(context) <= max_chars:
+        return context
+    return context[:max_chars] + "\n\n...контекст обрезан из-за размера..."
+
+
+import re  # 👈 добавь в начало файла, если ещё не импортирован
+
 @router.post("/ask/{case_id}")
-async def ask(case_id: int, request: QuestionRequest):
+async def ask(
+    case_id: int,
+    request: QuestionRequest,
+    db: Session = Depends(get_db)
+):
     """
-    Генерация юридического ответа на вопрос по делу с заданным case_id.
-    Возвращает структуру, подходящую под documentSections.
+    Генерация постановления на основе запроса пользователя (RAG: retriever + встроенный reranker).
+    Возвращает documentSections — список блоков (title, paragraph, ai).
     """
     try:
-        raw_answer = answer_query(case_id, request.question)
+        logger.info(f"📥 Генерация постановления для case_id={case_id}, запрос: {request.question}")
 
-        # Оборачиваем в documentSections-подобный массив
-        document_sections = [
-            {
-                "type": "paragraph",
-                "content": raw_answer
-            }
-        ]
+        # 🔍 1. Получаем top-k чанков (уже после rerank внутри функции)
+        top_chunks = search_similar_chunks(query=request.question, case_id=case_id, k=10)
+        chunk_texts = [chunk["text"] for chunk in top_chunks if "text" in chunk]
 
-        return document_sections
+        if not chunk_texts:
+            raise HTTPException(status_code=404, detail="Не найдено релевантных фрагментов.")
+
+        # ✂️ 2. Сборка и обрезка контекста
+        context = truncate_context("\n\n".join(chunk_texts))
+
+        # 🧠 3. Промпт для генерации
+        prompt = f"Вопрос: {request.question}\nКонтекст:\n{context}\nОтвет:"
+
+        # 🤖 4. Генерация ответа
+        response_text = generate_answer(prompt)
+        logger.debug("📤 Ответ от модели (response_text):\n%s", response_text)  # 👈 Добавь это
+        
+        # 🧼 5. Очистка вывода от лишнего текста (оставить только JSON-массив)
+        match = re.search(r"\[.*\]", response_text, re.DOTALL)
+        if not match:
+            logger.error("❌ В ответе не найден JSON-массив:\n%s", response_text)
+            raise HTTPException(status_code=500, detail="Модель вернула некорректный формат данных.")
+        cleaned_json = match.group(0)
+
+        # 📦 6. Парсинг JSON
+        try:
+            document_sections = json.loads(cleaned_json)
+            if not isinstance(document_sections, list):
+                raise ValueError("Ожидался список JSON-блоков.")
+            return document_sections
+
+        except json.JSONDecodeError as e:
+            logger.error("❌ JSONDecodeError:\n%s", cleaned_json)
+            raise HTTPException(status_code=500, detail="Модель вернула некорректный JSON.")
 
     except Exception as e:
-        logger.exception("Ошибка при генерации ответа")
-        raise HTTPException(status_code=500, detail="Ошибка генерации ответа")
+        logger.exception("🔥 Ошибка генерации постановления")
+        raise HTTPException(status_code=500, detail="Ошибка генерации постановления")
