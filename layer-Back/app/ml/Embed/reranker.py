@@ -1,8 +1,9 @@
 from sentence_transformers import CrossEncoder
+import os
 
 # Загружаем модель (можно заменить на smaller если нужно)
-reranker = CrossEncoder("BAAI/bge-reranker-base")  # или large
-
+RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-base")
+reranker = CrossEncoder(RERANKER_MODEL)
 def rerank_chunks(query: str, chunks: list[str], top_k: int = 3) -> list[str]:
     """Реранкинг чанков по смыслу с логами."""
     pairs = [[query, chunk] for chunk in chunks]

@@ -56,8 +56,10 @@ import { $fetch } from 'ofetch'
 import DocCard from '../DocCard.vue'
 import DocumentFilterBar from '../DocumentFilterBar.vue'
 import DocumentToolbar from '../DocumentToolbar.vue'
+import { useRuntimeConfig } from '#app'
 
 const props = defineProps<{ caseId: number }>()
+const config = useRuntimeConfig()
 
 type DocumentType = {
   id: number
@@ -92,11 +94,13 @@ const fetchDocuments = async (id?: number) => {
     const token = localStorage.getItem('token')
     const caseIdToUse = id ?? props.caseId
 
-    const response = await $fetch(`http://localhost:8000/cases/${caseIdToUse}`, {
+    const response = await $fetch(`/cases/${caseIdToUse}`, {
+      baseURL: config.public.apiBase,
       headers: {
         Authorization: `Bearer ${token}`
-      }
+      },
     })
+
 
     documents.value = response.documents || []
     console.log('📄 Загружено документов:', documents.value)
@@ -168,12 +172,14 @@ const deleteSelected = async () => {
   const token = localStorage.getItem('token')
 
   try {
-    await $fetch(`http://localhost:8000/documents/${id}`, {
+    await $fetch(`/documents/${id}`, {
+      baseURL: config.public.apiBase,
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`, // добавь токен
-      },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
     })
+
 
     documents.value = documents.value.filter(doc => doc.id !== id)
     selectedDoc.value = null
@@ -197,14 +203,16 @@ const saveEdit = async () => {
   console.log("📦 [FRONTEND] Тело запроса:", payload)
 
   try {
-    const updated = await $fetch(`http://localhost:8000/documents/${editForm.value.id}`, {
+    const updated = await $fetch(`/documents/${editForm.value.id}`, {
+      baseURL: config.public.apiBase,
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload), // ⚠️ обязательно строкой
-    })
+    body: JSON.stringify(payload),
+})
+
 
     console.log("✅ [FRONTEND] Ответ от сервера:", updated)
 

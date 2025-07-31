@@ -55,6 +55,7 @@ import CaseCard from '~/components/CaseCard.vue'
 import DocumentCard from '~/components/DocumentCard.vue'
 import LegalAIIcon from '~/components/animations/LegalALIcon.vue'
 import { $fetch } from 'ofetch'
+import { useRuntimeConfig } from '#app'
 definePageMeta({
   middleware: ['auth'],
 })
@@ -116,8 +117,10 @@ onMounted(async () => {
     return
   }
 
+  const config = useRuntimeConfig()
+
   const fetchConfig = {
-    baseURL: 'http://localhost:8000',
+    baseURL: config.public.apiBase,
     headers: { Authorization: `Bearer ${token}` },
   }
 

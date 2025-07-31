@@ -34,6 +34,8 @@ defineOptions({ name: 'DocumentToolbar' })
 
 import { ref, watch, computed } from 'vue'
 import { $fetch } from 'ofetch'
+import { useRuntimeConfig } from '#app';
+const config = useRuntimeConfig()
 
 // ✅ Пропсы
 const props = defineProps<{
@@ -66,13 +68,15 @@ const handleFileUpload = async (event: Event) => {
     }
     const token = localStorage.getItem('token')
     try {
-      const response = await $fetch(`http://localhost:8000/cases/${props.caseId}/documents`, {
+      const response = await $fetch(`/cases/${props.caseId}/documents`, {
+        baseURL: config.public.apiBase,
         method: "POST",
         body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`
+      headers: {
+        Authorization: `Bearer ${token}`
         }
       })
+
       console.log("✅ Успешная загрузка:", response)
 
       // 🔄 Обновляем список документов

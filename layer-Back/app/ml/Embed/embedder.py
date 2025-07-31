@@ -4,8 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-MODEL_NAME = os.getenv("OLLAMA_MODEL", "nomic-embed-text")
+EMBEDDER_URL = os.getenv("EMBEDDER_URL")
+EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL")
 
 def get_embedding(text: str) -> list[float]:
     """Получение эмбеддинга для текста через Ollama."""
@@ -16,8 +16,8 @@ def get_embedding(text: str) -> list[float]:
         logger.debug(f"📎 Эмбеддинг для текста (длина {len(text)}): {text[:60]}...")
 
         response = requests.post(
-            f"{OLLAMA_URL}/api/embeddings",
-            json={"model": MODEL_NAME, "prompt": text}
+            f"{EMBEDDER_URL}/api/embeddings",
+            json={"model": EMBEDDER_MODEL, "prompt": text}
         )
         response.raise_for_status()
         data = response.json()

@@ -4,6 +4,8 @@ type User = {
 }
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  const config = useRuntimeConfig()
+
   const publicPages = ['/', '/logout', '/register']
   const isPublic = publicPages.includes(to.path)
 
@@ -20,7 +22,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   try {
     const res = await $fetch<User>('/me', {
-      baseURL: 'http://localhost:8000',
+      baseURL: config.public.apiBase,
       headers: { Authorization: `Bearer ${token}` },
     })
 

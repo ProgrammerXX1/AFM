@@ -24,12 +24,13 @@ import SuspectInfo from '~/components/SuspectInfo.vue'
 import CaseDetails from '~/components/CaseDetails.vue'
 import DocumentList from '~/components/DocumentList/DocumentList.vue'
 import { $fetch } from 'ofetch'
+import { useRuntimeConfig } from '#app'
+import { definePageMeta } from '#imports'
 
 definePageMeta({
   middleware: ['auth'],
 })
 
-// Тип дела (можно заменить на CaseOut)
 type CaseOut = {
   id: number
   case_number: string
@@ -54,8 +55,7 @@ type CaseOut = {
   }[]
 }
 
-
-
+const config = useRuntimeConfig()
 const route = useRoute()
 const selectedCaseId = route.query.id as string
 
@@ -71,7 +71,7 @@ onMounted(async () => {
 
   try {
     const res = await $fetch<CaseOut>(`/cases/${selectedCaseId}`, {
-      baseURL: 'http://localhost:8000',
+      baseURL: config.public.apiBase,
       headers: { Authorization: `Bearer ${token}` },
     })
 
@@ -81,6 +81,7 @@ onMounted(async () => {
   }
 })
 </script>
+
 
 <style scoped>
 .container {

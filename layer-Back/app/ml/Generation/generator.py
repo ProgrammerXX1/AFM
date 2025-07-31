@@ -4,8 +4,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
+GENERATOR_URL = os.getenv("GENERATOR_URL")
+GENERATOR_MODEL = os.getenv("GENERATOR_MODEL")
 
 # 🧠 Усиленная инструкция для модели (юридическая строгость)
 SYSTEM_PROMPT = """
@@ -45,14 +45,14 @@ def generate_answer(prompt: str) -> str:
     """Генерация ответа с использованием Ollama и строгой юридической инструкцией."""
     try:
         payload = {
-            "model": OLLAMA_MODEL,
+            "model": GENERATOR_MODEL,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ],
             "stream": False,
         }
-        response = requests.post(OLLAMA_URL, json=payload)
+        response = requests.post(GENERATOR_URL, json=payload)
         response.raise_for_status()
 
         data = response.json()

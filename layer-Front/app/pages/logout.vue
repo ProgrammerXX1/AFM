@@ -58,6 +58,7 @@ definePageMeta({ layout: false })
 
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+const config = useRuntimeConfig()
 
 const router = useRouter()
 
@@ -91,9 +92,10 @@ const handleLogin = async () => {
     formData.append('username', username.value)
     formData.append('password', password.value)
 
-    const res = await useFetch('http://localhost:8000/login', {
+    const res = await useFetch('/login', {
+      baseURL: config.public.apiBase,
       method: 'POST',
-      body: formData
+      body: formData,
     })
 
     const data = res.data.value
@@ -110,8 +112,6 @@ const handleLogin = async () => {
     isLoading.value = false
   }
 }
-
-// 📝 Регистрация
 const handleRegister = async () => {
   if (!username.value || !password.value) {
     errorMessage.value = 'Введите имя пользователя и пароль'
@@ -127,13 +127,15 @@ const handleRegister = async () => {
     formData.append('username', username.value)
     formData.append('password', password.value)
 
-    const res = await useFetch('http://localhost:8000/register', {
+    const res = await useFetch('/register', {
+      baseURL: config.public.apiBase,
       method: 'POST',
-      body: formData
+      body: formData,
     })
 
     if (res.error.value) {
-      errorMessage.value = res.error.value?.data?.detail || 'Ошибка регистрации. Возможно, имя занято.'
+      errorMessage.value =
+        res.error.value?.data?.detail || 'Ошибка регистрации. Возможно, имя занято.'
       return
     }
 
@@ -148,4 +150,5 @@ const handleRegister = async () => {
     isLoading.value = false
   }
 }
+
 </script>

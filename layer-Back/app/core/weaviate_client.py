@@ -10,16 +10,20 @@ import logging
 from weaviate.classes.query import Filter
 from fastapi import HTTPException, Depends, Query
 from sqlalchemy.orm import Session
+import os
 logger = logging.getLogger(__name__)
+
+def str_to_bool(value: str) -> bool:
+    return value.lower() in ("true", "1", "yes")
 
 client = WeaviateClient(
     connection_params=ConnectionParams.from_params(
-        http_host="localhost",
-        http_port=8080,
-        http_secure=False,
-        grpc_host="localhost",
-        grpc_port=50051,
-        grpc_secure=False
+        http_host=os.getenv("WEAVIATE_HTTP_HOST", "localhost"),
+        http_port=int(os.getenv("WEAVIATE_HTTP_PORT", 8080)),
+        http_secure=str_to_bool(os.getenv("WEAVIATE_HTTP_SECURE", "false")),
+        grpc_host=os.getenv("WEAVIATE_GRPC_HOST", "localhost"),
+        grpc_port=int(os.getenv("WEAVIATE_GRPC_PORT", 50051)),
+        grpc_secure=str_to_bool(os.getenv("WEAVIATE_GRPC_SECURE", "false")),
     ),
     additional_config=AdditionalConfig(
         grpc=True,

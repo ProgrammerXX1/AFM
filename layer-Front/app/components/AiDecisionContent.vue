@@ -46,6 +46,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { $fetch } from 'ofetch'
+import { useRuntimeConfig } from '#app'
+const config = useRuntimeConfig()
 
 const route = useRoute()
 const caseId = route.params.case_id?.toString() || '1'
@@ -56,7 +58,8 @@ const errorMessage = ref('')
 onMounted(async () => {
   try {
     isLoading.value = true
-    const response = await $fetch(`http://localhost:8000/ask/${caseId}`, {
+    const response = await $fetch(`/ask/${caseId}`, {
+      baseURL: config.public.apiBase,
       method: 'POST',
       body: {
         question: 'Квалификация деяния подозреваемого пострадавшего и обвиняемого',
