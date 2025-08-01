@@ -11,8 +11,8 @@ from app.security.security import get_current_user
 from app.models.cases import CaseModel, DocumentModel
 from app.models.user import User
 from app.core.weaviate_client import ensure_schema, client
-from app.ml.Embed.embedding_pipeline import index_full_document
-from app.ml.Embed.embedding_pipeline import search_similar_chunks
+from app.ml.Embed.pipeline import index_full_document
+from app.ml.Embed.pipeline import search_similar_chunks
 from app.ml.Generation.pipeline import answer_query
 from app.ml.Generation.generator import generate_answer
 from sqlalchemy import text
@@ -94,14 +94,15 @@ async def upload_documents(
             db.add(document)
             db.flush()  # ← Получаем document.id
 
-            # ✅ Индексация чанков с учётом user_id и case_id
+            # ✅ Индексация чанков с учетом user_id и doc_type="auto"
             index_full_document(
                 title=file.filename,
                 text=text,
                 filetype=file.content_type,
                 user_id=current_user.id,
                 case_id=case.id,
-                document_id=document.id
+                document_id=document.id,
+                doc_type="auto"
             )
 
             documents.append(document)
@@ -180,24 +181,33 @@ async def ask(
 
         # 🤖 4. Генерация ответа
         response_text = generate_answer(prompt)
-        logger.debug("📤 Ответ от модели (response_text):\n%s", response_text)  # 👈 Добавь это
-        
-        # 🧼 5. Очистка вывода от лишнего текста (оставить только JSON-массив)
+        logger.debug("📤 Ответ от модели:\n%s", response_text)
+
+        # 🧼 5. Извлечение JSON-массива из текста
         match = re.search(r"\[.*\]", response_text, re.DOTALL)
         if not match:
             logger.error("❌ В ответе не найден JSON-массив:\n%s", response_text)
             raise HTTPException(status_code=500, detail="Модель вернула некорректный формат данных.")
+
         cleaned_json = match.group(0)
 
-        # 📦 6. Парсинг JSON
+        # 📦 6. Парсинг и проверка структуры JSON
         try:
             document_sections = json.loads(cleaned_json)
             if not isinstance(document_sections, list):
-                raise ValueError("Ожидался список JSON-блоков.")
+                raise ValueError("Ожидался список блоков.")
+
+            # 💡 Валидация каждого блока
+            for idx, item in enumerate(document_sections):
+                if not isinstance(item, dict):
+                    raise ValueError(f"Элемент {idx} не является объектом.")
+                if not all(k in item for k in ("title", "paragraph", "ai")):
+                    raise ValueError(f"Элемент {idx} не содержит необходимые ключи (title, paragraph, ai).")
+
             return document_sections
 
-        except json.JSONDecodeError as e:
-            logger.error("❌ JSONDecodeError:\n%s", cleaned_json)
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error("❌ Ошибка валидации JSON:\n%s", cleaned_json)
             raise HTTPException(status_code=500, detail="Модель вернула некорректный JSON.")
 
     except Exception as e:

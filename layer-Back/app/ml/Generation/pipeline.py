@@ -1,4 +1,4 @@
-from app.ml.Embed.embedding_pipeline import search_similar_chunks
+from app.ml.Embed.pipeline import search_similar_chunks
 from app.ml.Generation.generator import generate_answer
 import logging
 

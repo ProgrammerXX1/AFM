@@ -1,5 +1,5 @@
 from datetime import datetime
-from app.core.weaviate_client import client
+from app.core.weaviate_client import client, ensure_connection
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.orm import Session, load_only
 from typing import List
@@ -8,7 +8,7 @@ from app.models.cases import CaseModel, DocumentModel
 from app.schemas.cases import CaseCreate, CaseOut, CaseShort, CaseDocumentPreview, DocumentOut, DocumentUpdate
 from app.db.database import get_db
 from app.security.security import get_current_user
-from app.ml.Embed.chunker import clear_seen_chunks  # обновим ниже
+from app.ml.Extract.extract import clear_seen_chunks  # обновим ниже
 from app.models.user import User
 
 import logging
@@ -98,7 +98,7 @@ def delete_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Получаем документ и проверяем владельца через CaseModel
+    # 🔍 Получаем документ и проверяем владельца
     document = db.query(DocumentModel).join(CaseModel).filter(
         DocumentModel.id == document_id,
         CaseModel.user_id == current_user.id
@@ -107,29 +107,56 @@ def delete_document(
     if not document:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
-    # ✅ Удаление чанков из Weaviate по document_id
+    # 🧹 Удаление чанков из Weaviate
     try:
-        if not client.is_connected():
-            client.connect()
+        ensure_connection()
 
         collection = client.collections.get("Document")
-        where_filter = Filter.by_property("document_id").equal(document.id)
+        where_filter = (
+            Filter.by_property("document_id").equal(document.id) &
+            Filter.by_property("user_id").equal(current_user.id)
+        )
+
         delete_result = collection.data.delete_many(where=where_filter)
-        logger.info(f"🗑️ Удалено чанков Weaviate: {delete_result.matches}")
+
+        if delete_result and delete_result.matches > 0:
+            logger.info(f"🗑️ Удалено чанков Weaviate: {delete_result.matches}")
+        else:
+            logger.warning("⚠️ delete_many ничего не удалил. Пробуем вручную...")
+
+            objects = collection.query.fetch_objects(limit=1000, with_vector=False)
+            to_delete = [
+                obj for obj in objects.objects
+                if obj.properties.get("document_id") == document.id and obj.properties.get("user_id") == current_user.id
+            ]
+
+            for obj in to_delete:
+                try:
+                    collection.data.delete_by_id(obj.uuid)
+                    logger.info(f"✅ Удалён чанк UUID={obj.uuid}")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка удаления UUID={obj.uuid}: {e}")
+
     except Exception as e:
         logger.warning(f"⚠️ Ошибка удаления чанков из Weaviate: {e}")
 
-    # ✅ Удаление кэш-файла по user_id / case_id / document_id
+    # 🧽 Удаление локального кэш-файла
     try:
-        clear_seen_chunks(user_id=current_user.id, case_id=document.case_id, document_id=document.id)
+        clear_seen_chunks(
+            user_id=current_user.id,
+            case_id=document.case_id,
+            document_id=document.id
+        )
     except Exception as e:
         logger.warning(f"⚠️ Ошибка очистки локального кэша: {e}")
 
-    # ✅ Удаление документа из базы
+    # 🗑️ Удаление из базы данных
     db.delete(document)
     db.commit()
 
     return {"message": "Документ и его чанки удалены"}
+
+
 
 
 @router.put("/documents/{doc_id}", response_model=DocumentOut)

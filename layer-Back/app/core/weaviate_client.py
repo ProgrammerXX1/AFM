@@ -73,7 +73,15 @@ def ensure_schema():
         logger.error(f"Ошибка при создании схемы: {str(e)}")
         raise
 
-def save_to_weaviate(title: str, text: str, filetype: str, case_id: int, vector: list[float], document_id: int | None = None) -> str:
+def save_to_weaviate(
+    title: str,
+    text: str,
+    filetype: str,
+    case_id: int,
+    vector: list[float],
+    document_id: int,
+    user_id: int  # ⬅️ Новый обязательный параметр
+) -> str:
     """Сохранение чанка в Weaviate."""
     try:
         ensure_connection()  # Проверяем подключение перед операцией
@@ -85,12 +93,9 @@ def save_to_weaviate(title: str, text: str, filetype: str, case_id: int, vector:
             "text": text,
             "filetype": filetype,
             "case_id": case_id,
-            "document_id": document_id  
+            "document_id": document_id,
+            "user_id": user_id  # ⬅️ Обязательное поле
         }
-
-        # 💡 Добавляем связь с документом
-        if document_id is not None:
-            properties["document_id"] = document_id
 
         collection.data.insert(
             uuid=doc_uuid,
@@ -98,12 +103,13 @@ def save_to_weaviate(title: str, text: str, filetype: str, case_id: int, vector:
             vector=vector
         )
 
-        logger.info(f"Чанк сохранён с weaviate_id: {doc_uuid}")
+        logger.info(f"✅ Чанк сохранён в Weaviate: UUID={doc_uuid}")
         return doc_uuid
 
     except Exception as e:
-        logger.error(f"Ошибка при сохранении чанка в Weaviate: {str(e)}")
+        logger.error(f"❌ Ошибка при сохранении чанка в Weaviate: {str(e)}")
         raise
+
 
 def is_valid_uuid(val: str) -> bool:
     try:
@@ -112,35 +118,3 @@ def is_valid_uuid(val: str) -> bool:
     except:
         return False
 
-def delete_document(
-    document_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    document = db.query(DocumentModel).join(CaseModel).filter(
-        DocumentModel.id == document_id,
-        CaseModel.user_id == current_user.id
-    ).first()
-
-    if not document:
-        raise HTTPException(status_code=404, detail="Документ не найден")
-
-    # ✅ Удаление всех чанков из Weaviate по document_id
-    try:
-        if not client.is_connected():
-            client.connect()
-
-        collection = client.collections.get("Document")
-
-        # ❗Правильный способ сформировать where-фильтр для v4
-        where_filter = Filter.by_property("document_id").equal(document.id)
-
-        delete_result = collection.data.delete_many(where=where_filter)
-        logger.info(f"🗑️ Удалено чанков Weaviate: {delete_result['matches']}")
-
-    except Exception as e:
-        logger.warning(f"⚠️ Ошибка удаления чанков из Weaviate: {e}")
-
-    db.delete(document)
-    db.commit()
-    return {"message": "Документ и чанки удалены"}
