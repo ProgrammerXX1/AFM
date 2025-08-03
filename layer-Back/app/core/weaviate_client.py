@@ -59,6 +59,13 @@ def ensure_schema():
                     Property(name="text", data_type=DataType.TEXT),
                     Property(name="filetype", data_type=DataType.TEXT),
                     Property(name="case_id", data_type=DataType.INT),
+                    Property(name="document_id", data_type=DataType.INT),
+                    Property(name="user_id", data_type=DataType.INT),
+                    Property(name="chunk_type", data_type=DataType.TEXT),
+                    Property(name="chunk_subtype", data_type=DataType.TEXT),   # ✅ добавлено
+                    Property(name="source_page", data_type=DataType.INT),      # ✅ добавлено
+                    Property(name="confidence", data_type=DataType.NUMBER),
+                    Property(name="hash", data_type=DataType.TEXT),
                 ],
                 vectorizer_config=Configure.Vectorizer.none(),
                 vector_index_config=Configure.VectorIndex.hnsw(
@@ -66,13 +73,12 @@ def ensure_schema():
                     vector_length=768
                 )
             )
-            logger.info("Коллекция Document создана")
+            logger.info("✅ Коллекция Document создана")
         else:
-            logger.info("Коллекция Document уже существует")
+            logger.info("ℹ️ Коллекция Document уже существует")
     except Exception as e:
-        logger.error(f"Ошибка при создании схемы: {str(e)}")
+        logger.error(f"❌ Ошибка при создании схемы: {str(e)}")
         raise
-
 def save_to_weaviate(
     title: str,
     text: str,
@@ -80,11 +86,16 @@ def save_to_weaviate(
     case_id: int,
     vector: list[float],
     document_id: int,
-    user_id: int  # ⬅️ Новый обязательный параметр
+    user_id: int,
+    chunk_type: str,
+    confidence: float,
+    hash: str,
+    chunk_subtype: str = None,   # ✅ опционально
+    source_page: int = None      # ✅ опционально
 ) -> str:
-    """Сохранение чанка в Weaviate."""
+    """Сохранение чанка в Weaviate с расширенными метаданными."""
     try:
-        ensure_connection()  # Проверяем подключение перед операцией
+        ensure_connection()
         doc_uuid = str(uuid.uuid4())
         collection = client.collections.get("Document")
 
@@ -94,8 +105,16 @@ def save_to_weaviate(
             "filetype": filetype,
             "case_id": case_id,
             "document_id": document_id,
-            "user_id": user_id  # ⬅️ Обязательное поле
+            "user_id": user_id,
+            "chunk_type": chunk_type,
+            "confidence": confidence,
+            "hash": hash
         }
+
+        if chunk_subtype:
+            properties["chunk_subtype"] = chunk_subtype
+        if source_page is not None:
+            properties["source_page"] = source_page
 
         collection.data.insert(
             uuid=doc_uuid,

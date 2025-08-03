@@ -8,7 +8,7 @@ from app.models.cases import CaseModel, DocumentModel
 from app.schemas.cases import CaseCreate, CaseOut, CaseShort, CaseDocumentPreview, DocumentOut, DocumentUpdate
 from app.db.database import get_db
 from app.security.security import get_current_user
-from app.ml.Extract.extract import clear_seen_chunks  # обновим ниже
+from app.ml.Embed.pipeline import clear_seen_chunks  # обновим ниже
 from app.models.user import User
 
 import logging
@@ -140,23 +140,21 @@ def delete_document(
     except Exception as e:
         logger.warning(f"⚠️ Ошибка удаления чанков из Weaviate: {e}")
 
-    # 🧽 Удаление локального кэш-файла
+    # 🧽 Удаление связанных хэшей из TXT-файла
     try:
         clear_seen_chunks(
             user_id=current_user.id,
             case_id=document.case_id,
-            document_id=document.id
+            document_id=document.id  # только эти три параметра
         )
     except Exception as e:
-        logger.warning(f"⚠️ Ошибка очистки локального кэша: {e}")
+        logger.warning(f"⚠️ Ошибка очистки TXT-кэша чанков: {e}")
 
     # 🗑️ Удаление из базы данных
     db.delete(document)
     db.commit()
 
     return {"message": "Документ и его чанки удалены"}
-
-
 
 
 @router.put("/documents/{doc_id}", response_model=DocumentOut)

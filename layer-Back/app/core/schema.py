@@ -28,15 +28,22 @@ try:
 
     # Создание конфигурации коллекции без встроенного векторизатора
     collection_config = {
-        "name": "Document",
-        "properties": [
-            Property(name="title", data_type=DataType.TEXT),
-            Property(name="text", data_type=DataType.TEXT),
-            Property(name="filetype", data_type=DataType.TEXT),
-            Property(name="case_id", data_type=DataType.INT),
-            Property(name="document_id", data_type=DataType.INT),
-            Property(name="user_id", data_type=DataType.INT),
-        ],
+    "name": "Document",
+    "properties": [
+        Property(name="title", data_type=DataType.TEXT),
+        Property(name="text", data_type=DataType.TEXT),
+        Property(name="filetype", data_type=DataType.TEXT),
+        Property(name="chunk_type", data_type=DataType.TEXT),
+        Property(name="chunk_subtype", data_type=DataType.TEXT),   # ✅ добавлено
+        Property(name="confidence", data_type=DataType.NUMBER),
+        Property(name="hash", data_type=DataType.TEXT),
+        Property(name="source_page", data_type=DataType.INT),      # ✅ добавлено
+        Property(name="case_id", data_type=DataType.INT),
+        Property(name="document_id", data_type=DataType.INT),
+        Property(name="user_id", data_type=DataType.INT),
+    ]
+
+
         # Не указываем vectorizer, чтобы использовать внешние эмбеддинги
         # Параметры индекса (HNSW, cosine) используются по умолчанию
     }

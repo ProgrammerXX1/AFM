@@ -10,13 +10,8 @@ from app.db.database import get_db
 from app.security.security import get_current_user
 from app.models.cases import CaseModel, DocumentModel
 from app.models.user import User
-from app.core.weaviate_client import ensure_schema, client
 from app.ml.Embed.pipeline import index_full_document
 from app.ml.Embed.pipeline import search_similar_chunks
-from app.ml.Generation.pipeline import answer_query
-from app.ml.Generation.generator import generate_answer
-from sqlalchemy import text
-from app.ml.Embed.reranker import rerank_chunks
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -138,6 +133,24 @@ async def semantic_search(
         logger.exception("❌ Ошибка при выполнении семантического поиска")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/cases/{case_id}/chunks")
+async def get_all_chunks_by_case(
+    case_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"📥 Получение всех чанков по делу #{case_id}")
+
+        chunks = get_chunks_by_case_id(case_id=case_id)
+        logger.info(f"📦 Найдено {len(chunks)} чанков")
+
+        return {"results": chunks}
+
+    except Exception as e:
+        logger.exception("❌ Ошибка при получении чанков")
+        raise HTTPException(status_code=500, detail="Ошибка при получении чанков")
+
+
 class QuestionRequest(BaseModel):
     question: str
 
@@ -152,64 +165,50 @@ def truncate_context(context: str, max_chars: int = 16000) -> str:
 
 
 import re  # 👈 добавь в начало файла, если ещё не импортирован
+from typing import List, Dict, Any
+import re
+import json
+import logging
+from fastapi import APIRouter, Depends, HTTPException
+from app.core.weaviate_client import WeaviateClient
+from app.ml.Generation.retriever import get_chunks_by_case_id
+from app.ml.Generation.generator import generate_investigation_plan
+from fastapi.responses import JSONResponse
+logger = logging.getLogger(__name__)
+from fastapi.responses import PlainTextResponse
 
-@router.post("/ask/{case_id}")
-async def ask(
-    case_id: int,
-    request: QuestionRequest,
-    db: Session = Depends(get_db)
-):
+
+@router.get("/generate/qualification/{case_id}", response_class=PlainTextResponse)
+async def generate_qualification(case_id: int):
     """
-    Генерация постановления на основе запроса пользователя (RAG: retriever + встроенный reranker).
-    Возвращает documentSections — список блоков (title, paragraph, ai).
+    Генерация постановления о квалификации уголовного правонарушения.
+    Возвращает полный юридический текст как обычный документ.
     """
     try:
-        logger.info(f"📥 Генерация постановления для case_id={case_id}, запрос: {request.question}")
+        logger.info(f"📥 Генерация постановления для case_id={case_id}")
 
-        # 🔍 1. Получаем top-k чанков (уже после rerank внутри функции)
-        top_chunks = search_similar_chunks(query=request.question, case_id=case_id, k=10)
-        chunk_texts = [chunk["text"] for chunk in top_chunks if "text" in chunk]
+        # Получаем чанки
+        chunk_types = ["testimony", "conclusion", "body", "warning_notice", "rights_notice"]
+        chunks = get_chunks_by_case_id(case_id=case_id)
+        filtered_chunks = [c for c in chunks if c.get("chunk_type") in chunk_types]
 
-        if not chunk_texts:
-            raise HTTPException(status_code=404, detail="Не найдено релевантных фрагментов.")
+        
+        
+        if not chunks:
+            raise HTTPException(status_code=404, detail="Нет данных для генерации постановления.")
 
-        # ✂️ 2. Сборка и обрезка контекста
-        context = truncate_context("\n\n".join(chunk_texts))
+        # Склеиваем текст
+        context = "\n\n".join(chunk["text"] for chunk in filtered_chunks if chunk.get("text"))
+        # logger.warning("Чанки, передаваемые в генератор:\n%s", json.dumps(chunks, indent=2, ensure_ascii=False))
 
-        # 🧠 3. Промпт для генерации
-        prompt = f"Вопрос: {request.question}\nКонтекст:\n{context}\nОтвет:"
+        # 
+     
+        generated_text = generate_investigation_plan(context)
+        logger.warning("📤 Ответ от модели:\n%s", generated_text)
 
-        # 🤖 4. Генерация ответа
-        response_text = generate_answer(prompt)
-        logger.debug("📤 Ответ от модели:\n%s", response_text)
 
-        # 🧼 5. Извлечение JSON-массива из текста
-        match = re.search(r"\[.*\]", response_text, re.DOTALL)
-        if not match:
-            logger.error("❌ В ответе не найден JSON-массив:\n%s", response_text)
-            raise HTTPException(status_code=500, detail="Модель вернула некорректный формат данных.")
+        return generated_text
 
-        cleaned_json = match.group(0)
-
-        # 📦 6. Парсинг и проверка структуры JSON
-        try:
-            document_sections = json.loads(cleaned_json)
-            if not isinstance(document_sections, list):
-                raise ValueError("Ожидался список блоков.")
-
-            # 💡 Валидация каждого блока
-            for idx, item in enumerate(document_sections):
-                if not isinstance(item, dict):
-                    raise ValueError(f"Элемент {idx} не является объектом.")
-                if not all(k in item for k in ("title", "paragraph", "ai")):
-                    raise ValueError(f"Элемент {idx} не содержит необходимые ключи (title, paragraph, ai).")
-
-            return document_sections
-
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.error("❌ Ошибка валидации JSON:\n%s", cleaned_json)
-            raise HTTPException(status_code=500, detail="Модель вернула некорректный JSON.")
-
-    except Exception as e:
-        logger.exception("🔥 Ошибка генерации постановления")
+    except Exception:
+        logger.exception("❌ Ошибка генерации постановления")
         raise HTTPException(status_code=500, detail="Ошибка генерации постановления")
