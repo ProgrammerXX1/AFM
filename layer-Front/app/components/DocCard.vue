@@ -39,7 +39,7 @@ const formattedDate = computed(() => {
 </script>
 <style scoped>
 .card {
-  background-color: var(--card-bg, #f9fafb);
+  /* background-color: var(--card-bg, #f9fafb); */
   border-radius: 10px;
   overflow: hidden;
   font-family: 'Segoe UI', sans-serif;
@@ -53,8 +53,8 @@ const formattedDate = computed(() => {
 }
 
 .card:hover {
-  background-color: var(--card-hover-bg, #f3f4f6);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  background-color: var(--card-hover-bg, #363636);
+  box-shadow: 0 4px 10px rgba(94, 87, 87, 0.05);
 }
 
 /* ✅ Когда выбрана */
@@ -64,7 +64,7 @@ const formattedDate = computed(() => {
 }
 
 .preview {
-  background-color: #f0f0f0;
+  /* background-color: #f0f0f0; */
   height: 110px;
   display: flex;
   align-items: center;

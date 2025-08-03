@@ -50,7 +50,7 @@ const goToIndex = () => {
 </script>
 <style scoped>
 .sidebar {
-  background-color: #f6f6f6;
+  /* background-color: #f6f6f6; */
   padding: 1rem;
   border-radius: 8px;
   display: flex;
@@ -125,7 +125,7 @@ li {
 
 .btn {
   padding: 0.5rem;
-  background: white;
+  /* background: white; */
   border: 1px solid #2563eb;
   border-radius: 6px;
   color: #2563eb;

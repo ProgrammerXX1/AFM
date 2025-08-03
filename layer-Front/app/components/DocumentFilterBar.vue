@@ -142,7 +142,7 @@ watch(range, (val) => {
 /* Контейнер всей панели фильтров */
 .filter-bar {
   width: 100%;
-  background-color: #1f1f1f;
+  /* background-color: #1f1f1f; */
   padding-top: 1px;
   border-radius: 10px;
   display: flex;
@@ -169,7 +169,7 @@ watch(range, (val) => {
 .label {
   font-weight: 500;
   margin-bottom: 4px;
-  color: #e5e7eb;
+  color: #363636;
   font-size: 12px;
 }
 
@@ -183,7 +183,7 @@ watch(range, (val) => {
 /* Унифицированный стиль для инпутов и селектов */
 .custom-input,
 .input-wrapper :deep(.dp__input) {
-  background-color: #111827;
+  background-color: #363636;
   color: white;
   border: 1px solid #374151;
   border-radius: 8px;
@@ -198,7 +198,7 @@ watch(range, (val) => {
 /* Выпадающий список */
 .custom-input option[disabled] {
   color: #6b7280;
-  background-color: #111827;
+  background-color: #5fc709;
 }
 
 /* Иконка слева (📄, 📆) */
@@ -246,7 +246,7 @@ watch(range, (val) => {
   padding: 6px 12px;
   border: 1px solid #374151;
   border-radius: 8px;
-  background-color: #111827;
+  background-color: #363636;
   font-size: 13px;
   color: white;
   width: 100%;

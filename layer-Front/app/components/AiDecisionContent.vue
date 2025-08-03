@@ -62,7 +62,7 @@ onMounted(async () => {
       baseURL: config.public.apiBase,
       method: 'POST',
       body: {
-        question: 'Квалификация деяния подозреваемого пострадавшего и обвиняемого',
+        question: 'пострадавшие и подозреваемые и их ущерб',
       },
     })
 
@@ -96,7 +96,7 @@ onMounted(async () => {
 
 <style scoped>
 .content {
-  background-color: #1e1e1e;
+  /* background-color: #1e1e1e; */
   padding: 2rem;
   border-radius: 8px;
   color: #f1f1f1;

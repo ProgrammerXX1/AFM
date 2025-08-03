@@ -1,7 +1,7 @@
 ```vue
 <template>
   <AppHeader />
-  <div class="relative min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-blue-950 overflow-hidden">
+  <div class="relative min-h-screen bg-gradient-to-br from-gray-300 via-gray-400 to-white-150 overflow-hidden">
     <!-- Космический фон -->
     <div class="absolute inset-0 z-0 pointer-events-none">
       <svg viewBox="0 0 1200 800" class="w-full h-full">

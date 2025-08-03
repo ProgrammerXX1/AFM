@@ -136,8 +136,11 @@
 <style scoped>
 .app-header {
   width: 100%;
-  border-bottom: 1px solid #2e2e2e;
   padding: 12px 0;
+  background-color: rgba(255, 255, 255, 0.05); /* полупрозрачный фон */
+  backdrop-filter: blur(8px); /* стеклянный эффект */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* мягкая граница */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* лёгкая тень снизу */
 }
 
 .header-container {
@@ -151,16 +154,17 @@
 
 .profile-btn {
   padding: 6px 14px;
-  background-color: #2a2a2a;
-  border: 1px solid #444;
-  color: white;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f9fafb;
   font-size: 13px;
   border-radius: 8px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .profile-btn:hover {
-  background-color: #4e4e4e;
+  background-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 </style>
-```

@@ -233,7 +233,7 @@ const saveEdit = async () => {
 
 <style scoped>
 .document-list {
-  background: #1e1e1e;
+  /* background: #1e1e1e; */
   border-radius: 12px;
   padding: 20px;
   margin-top: 1.5rem;
@@ -243,7 +243,9 @@ const saveEdit = async () => {
 }
 
 .filter-wrapper {
+  /* background: #1e1e1e; */
   width: 100%;
+  display: flex;
   padding: 1 8px;
   box-sizing: border-box;
 }

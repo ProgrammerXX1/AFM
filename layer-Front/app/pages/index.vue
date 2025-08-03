@@ -35,15 +35,17 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <DocumentCard
-          v-for="(doc, index) in visibleDocuments"
-          :key="index"
-          :number="doc.case_number"
-          :title="doc.title"
-          :date="formatDate(doc.created_at)"
-        />
-      </div>
+      <!-- Родительский компонент -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-gray-700">
+  <CaseCard
+    v-for="(item, index) in visibleCases"
+    :key="index"
+    :id="String(item.id)" 
+    :number="item.case_number"
+    :date="formatDate(item.registration_date)"    
+  />
+</div>
+
     </section>
   </div>
 </template>

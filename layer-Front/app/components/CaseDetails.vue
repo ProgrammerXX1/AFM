@@ -61,7 +61,7 @@ const goToAnalysis = () => router.push({ name: 'analysis' })
 }
 
 .card {
-  background: #f9fafc;
+  /* background: #f9fafc; */
   padding: 14px;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
@@ -110,9 +110,9 @@ const goToAnalysis = () => router.push({ name: 'analysis' })
   align-items: center;
   justify-content: center;
   gap: 5px;
-  background-color: #ffffff;
+  /* background-color: #ffffff; */
   border: 1px solid #cbd5e1;
-  color: #111827;
+  color: #ffffff;
   padding: 8px 10px;
   border-radius: 10px;
   font-size: 13px;

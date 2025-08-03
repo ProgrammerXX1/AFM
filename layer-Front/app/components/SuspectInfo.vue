@@ -1,5 +1,5 @@
 <template>
-  <div class="card">
+  <div class="suspect-card">
     <h3 class="title">Подозреваемый</h3>
 
     <div class="info-grid">
@@ -42,29 +42,30 @@ const props = defineProps<{
 const filledPercentage = 80
 </script>
 
-
 <style scoped>
-.card {
-  background: #f9f9fc;
+.suspect-card {
+  /* background-color: #ffffff; */
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid #e5e7eb;
   font-family: 'Segoe UI', sans-serif;
   font-size: 13px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .title {
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 10px;
+  color: #111827;
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: 100px 1fr;
   gap: 6px;
-  border-top: 1px solid #ccc;
-  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
 }
 
 .label-column,
@@ -76,10 +77,12 @@ const filledPercentage = 80
 
 .label {
   font-weight: 600;
+  color: #374151;
 }
 
 .value {
   font-weight: 400;
+  color: #1f2937;
 }
 
 .progress-section {
@@ -87,7 +90,7 @@ const filledPercentage = 80
 }
 
 .progress-bar {
-  background-color: #dbeafe;
+  background-color: #e0f2fe;
   height: 8px;
   border-radius: 999px;
   overflow: hidden;
@@ -96,13 +99,19 @@ const filledPercentage = 80
 .progress {
   background-color: #3b82f6;
   height: 100%;
+  transition: width 0.3s ease;
 }
 
 .progress-labels {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #444;
+  color: #374151;
   margin-top: 4px;
+}
+
+.percentage {
+  font-weight: 600;
+  color: #1e40af;
 }
 </style>

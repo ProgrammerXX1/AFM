@@ -89,7 +89,11 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 0.5rem;
   box-sizing: border-box;
+
+  background-color: transparent; /* 🌿 теперь он прозрачный */
+  color: #111827;
 }
+
 
 .grid-layout {
   display: grid;
