@@ -1,7 +1,7 @@
 import re
 import hashlib
 from typing import List, Dict
-
+from app.ml.Embed.chunker.postprocess import generic_post_process_chunks
 MIN_LEN = 100
 
 SECTION_TITLES = [
@@ -134,7 +134,8 @@ def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
         processed.append(chunk)
         position += 1
 
-    return processed
+    # 🔧 Добавляем финальную общую фильтрацию и семантическую дедупликацию
+    return generic_post_process_chunks(processed)
 
 
 def chunk_zayavlenie(

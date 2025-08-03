@@ -4,7 +4,6 @@ from typing import Dict, List, Callable
 
 from .postanovlenie import chunk_postanovlenie, post_process_chunks as process_postanovlenie
 from .zayablenie import chunk_zayavlenie, post_process_chunks as process_zayavlenie
-from .dopros import chunk_dopros, post_process_chunks as process_dopros
 from .protokol import chunk_protokol, post_process_chunks as process_protokol
 from .default import chunk_common, post_process_chunks as process_default
 
@@ -18,15 +17,6 @@ def detect_doc_type(text: str) -> str:
     if re.search(r"протокол", lowered):
         logger.info("📑 Тип документа: протокол допроса")
         return "протокол"
-    elif re.search(r"\bпостановление\b", lowered):
-        logger.info("📑 Тип документа: постановление (возбуждение)")
-        return "постановление"
-    elif "рапорт" in lowered:
-        logger.info("📑 Тип документа: рапорт → допрос")
-        return "допрос"
-    elif re.search(r"\bдопрос\b", lowered):
-        logger.info("📑 Тип документа: допрос")
-        return "допрос"
     elif re.search(r"\bзаявление\b", lowered):
         logger.info("📑 Тип документа: заявление")
         return "заявление"
@@ -59,7 +49,6 @@ def chunk_by_filetype(
     chunk_fn_map = {
         "постановление": chunk_postanovlenie,
         "заявление": chunk_zayavlenie,
-        "допрос": chunk_dopros,
         "протокол": chunk_protokol,
     }
 
@@ -79,7 +68,6 @@ def get_postprocessor(filetype: str) -> Callable[[List[Dict]], List[Dict]]:
     processor_map = {
         "постановление": process_postanovlenie,
         "заявление": process_zayavlenie,
-        "допрос": process_dopros,
         "протокол": process_protokol,
     }
 

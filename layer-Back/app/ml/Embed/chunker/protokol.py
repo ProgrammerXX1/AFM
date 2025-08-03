@@ -1,7 +1,7 @@
 import hashlib
 import re
 from typing import Dict, List, Optional
-
+from app.ml.Embed.chunker.postprocess import generic_post_process_chunks
 MIN_LEN = 100
 
 SECTIONS = {
@@ -138,4 +138,4 @@ def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
             current_position += 1
 
     flush_buffer(chunks[-1] if chunks else {})
-    return processed
+    return generic_post_process_chunks(processed)

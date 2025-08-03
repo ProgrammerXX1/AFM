@@ -2,7 +2,7 @@ import hashlib
 import re
 from typing import Dict, List
 from .utils import normalize_text
-
+from app.ml.Embed.chunker.postprocess import generic_post_process_chunks
 MIN_LEN = 100
 
 SECTIONS = {
@@ -57,11 +57,10 @@ def chunk_common(
 
     return chunks
 
-
 def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
-    """Универсальная постобработка: фильтрация, уникальность, позиция."""
+    """Универсальная постобработка: фильтрация, уникальность, позиция, дедупликация по смыслу."""
     seen_hashes = set()
-    result = []
+    enriched = []
     position = 1
 
     for chunk in chunks:
@@ -74,12 +73,15 @@ def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
             continue
 
         seen_hashes.add(chunk_hash)
+
         chunk["hash"] = chunk_hash
         chunk["semantic_hash"] = hashlib.md5(normalize_text(text).encode("utf-8")).hexdigest()
         chunk["position"] = position
         chunk["source_page"] = chunk.get("source_page", -1)
+        chunk["confidence"] = 1.0
 
-        result.append(chunk)
+        enriched.append(chunk)
         position += 1
 
-    return result
+    # ✅ Финальная дедупликация и фильтрация по смыслу
+    return generic_post_process_chunks(enriched)

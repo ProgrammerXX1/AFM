@@ -1,7 +1,7 @@
 import re
 import hashlib
 from typing import List, Dict
-
+from app.ml.Embed.chunker.postprocess import generic_post_process_chunks
 SECTION_TO_TYPE = {
     "title": "title",
     "intro": "intro",
@@ -127,7 +127,7 @@ def _chunk_by_sections(
 def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
     valid_types = set(SECTION_TO_TYPE.values())
     seen_semantic = set()
-    result = []
+    prefiltered = []
     position = 1
 
     for chunk in chunks:
@@ -143,7 +143,7 @@ def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
         low_text = text.lower()
         original_type = chunk.get("chunk_type")
 
-        # 🔄 Исправление невалидных типов
+        # 🔄 Исправление chunk_type + chunk_subtype
         if original_type not in valid_types:
             if original_type == "signature_final":
                 chunk["chunk_type"] = "signature"
@@ -157,7 +157,7 @@ def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
             else:
                 chunk["chunk_type"] = "other"
 
-        # 🧠 Назначение семантических подтипов
+        # 🧠 Подтип по ключевым фразам
         if "о принятом решении уведомить" in low_text:
             chunk["chunk_type"] = "decision"
             chunk["chunk_subtype"] = "final_notice"
@@ -182,19 +182,18 @@ def post_process_chunks(chunks: List[Dict]) -> List[Dict]:
         elif chunk.get("chunk_type") == "metadata":
             chunk["chunk_subtype"] = "qr_signature"
 
-        # ✅ Fallback subtype
-        if not chunk.get("chunk_subtype") or chunk["chunk_subtype"] is None:
+        if not chunk.get("chunk_subtype"):
             chunk["chunk_subtype"] = chunk["chunk_type"]
 
-        # 🚫 Финальная валидация
         if chunk["chunk_type"] not in valid_types:
             raise ValueError(f"❌ Недопустимый chunk_type: {chunk['chunk_type']} в чанке:\n{text[:200]}...")
 
-        # ➕ Назначение позиции
         chunk["position"] = position
-        result.append(chunk)
+        prefiltered.append(chunk)
         position += 1
 
-    if not result:
+    if not prefiltered:
         raise ValueError("⚠️ Все чанки были отфильтрованы — проверь правила или исходный текст.")
-    return result
+
+    # ✅ Финальная очистка, фильтрация, дедупликация
+    return generic_post_process_chunks(prefiltered)

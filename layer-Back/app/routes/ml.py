@@ -163,52 +163,18 @@ def truncate_context(context: str, max_chars: int = 16000) -> str:
         return context
     return context[:max_chars] + "\n\n...контекст обрезан из-за размера..."
 
-
-import re  # 👈 добавь в начало файла, если ещё не импортирован
-from typing import List, Dict, Any
-import re
-import json
-import logging
-from fastapi import APIRouter, Depends, HTTPException
-from app.core.weaviate_client import WeaviateClient
-from app.ml.Generation.retriever import get_chunks_by_case_id
 from app.ml.Generation.generator import generate_investigation_plan
-from fastapi.responses import JSONResponse
-logger = logging.getLogger(__name__)
 from fastapi.responses import PlainTextResponse
-
 
 @router.get("/generate/qualification/{case_id}", response_class=PlainTextResponse)
 async def generate_qualification(case_id: int):
     """
     Генерация постановления о квалификации уголовного правонарушения.
-    Возвращает полный юридический текст как обычный документ.
     """
     try:
         logger.info(f"📥 Генерация постановления для case_id={case_id}")
-
-        # Получаем чанки
-        chunk_types = ["testimony", "conclusion", "body", "warning_notice", "rights_notice"]
-        chunks = get_chunks_by_case_id(case_id=case_id)
-        filtered_chunks = [c for c in chunks if c.get("chunk_type") in chunk_types]
-
-        
-        
-        if not chunks:
-            raise HTTPException(status_code=404, detail="Нет данных для генерации постановления.")
-
-        # Склеиваем текст
-        context = "\n\n".join(chunk["text"] for chunk in filtered_chunks if chunk.get("text"))
-        # logger.warning("Чанки, передаваемые в генератор:\n%s", json.dumps(chunks, indent=2, ensure_ascii=False))
-
-        # 
-     
-        generated_text = generate_investigation_plan(context)
-        logger.warning("📤 Ответ от модели:\n%s", generated_text)
-
-
-        return generated_text
-
+        result = generate_investigation_plan(case_id)
+        return result
     except Exception:
         logger.exception("❌ Ошибка генерации постановления")
         raise HTTPException(status_code=500, detail="Ошибка генерации постановления")
