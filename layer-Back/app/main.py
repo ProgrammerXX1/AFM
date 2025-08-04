@@ -81,5 +81,5 @@ app.openapi = custom_openapi
 # 🚀 Запуск
 if __name__ == "__main__":
     host = os.getenv("BACKEND_HOST", "localhost")
-    port = int(os.getenv("BACKEND_PORT", 8000))
+    port = int(os.getenv("BACKEND_PORT", 8001)
     uvicorn.run("main:app", host=host, port=port, reload=False)

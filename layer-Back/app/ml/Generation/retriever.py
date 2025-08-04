@@ -5,7 +5,7 @@ from app.ml.Embed.reranker import rerank_chunks
 from app.ml.Embed.embedder import get_embedding
 from weaviate.classes.query import Filter
 from app.ml.Embed.chunker.postprocess import generic_post_process_for_rerank
-def hybrid_search(case_id: int, query: str, top_k: int = 15) -> List[Dict]:
+def hybrid_search(case_id: int, query: str, top_k: int = 10) -> List[Dict]:
     """
     Гибридный поиск: векторный (semantic) + BM25 + reranker.
     Возвращает reranked top-k чанков по смысловой релевантности.

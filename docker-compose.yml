@@ -1,54 +1,26 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: ./layer-Back
-      dockerfile: Dockerfile
-    container_name: backend
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - weaviate
-    env_file:
-      - ./layer-Back/.env
-    volumes:
-      - ./layer-Back:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
-
-  frontend:
-    build:
-      context: ./layer-Front
-      dockerfile: Dockerfile
-    container_name: frontend
-    ports:
-      - "80:3000"
-    depends_on:
-      - backend
-    env_file:
-      - ./layer-Front/.env
-    environment:
-      NUXT_HOST: 0.0.0.0
-      NUXT_PORT: 3000
-
   db:
-    image: postgres:17
+    image: postgres:15
     container_name: postgres
     restart: always
     ports:
       - "5432:5432"
-    expose:
-      - "5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 2123
       POSTGRES_DB: layer
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   weaviate:
-    image: semitechnologies/weaviate:latest
+    image: semitechnologies/weaviate:1.23.7
     container_name: weaviate
     ports:
       - "8080:8080"
@@ -62,6 +34,11 @@ services:
       GRPC_PORT: 50051
     volumes:
       - weaviate_data:/var/lib/weaviate
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
