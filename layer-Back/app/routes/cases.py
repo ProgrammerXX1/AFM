@@ -180,3 +180,4 @@ def update_document(
     db.refresh(document)
 
     return document
+
