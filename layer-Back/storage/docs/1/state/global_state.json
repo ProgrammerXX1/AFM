@@ -1,0 +1,476 @@
+{
+  "case_meta": {
+    "case_id": 1,
+    "erdr": "erdr@kgp.kz",
+    "city": "Pavlodar",
+    "region": "Pavlodar Region",
+    "agency": "Department of Economic Investigations",
+    "decision_date": "22 April 2025",
+    "offense_article_best": "ст.217 ч.1 п.1 УК РК"
+  },
+  "investigators": [
+    {
+      "name": "Sergey Shakunov",
+      "rank": "Deputy Commissioner",
+      "position": "Department of Economic Investigations",
+      "doc_refs": [
+        "doc:2307#chunk:0"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "name": "Erkin Zakiev",
+      "rank": "Deputy Commissioner",
+      "position": "Department of Economic Investigations",
+      "doc_refs": [
+        "doc:2305#chunk:0",
+        "doc:2308#chunk:0",
+        "doc:2309#chunk:0",
+        "doc:2310#chunk:0",
+        "doc:2311#chunk:0",
+        "doc:2312#chunk:0"
+      ],
+      "confidence": 0.9
+    }
+  ],
+  "prosecutors": [],
+  "actors": [
+    {
+      "name": "Murat Dauletovich Kasanguzinov",
+      "iin": "791204350388",
+      "doc_refs": [
+        "doc:2305#chunk:0",
+        "doc:2308#chunk:0",
+        "doc:2309#chunk:0",
+        "doc:2310#chunk:0",
+        "doc:2311#chunk:0",
+        "doc:2312#chunk:0"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "name": "Kasanguzinov M.D.",
+      "iin": "",
+      "doc_refs": [
+        "doc:2305#chunk:0",
+        "doc:2308#chunk:0",
+        "doc:2309#chunk:0",
+        "doc:2310#chunk:0",
+        "doc:2311#chunk:0",
+        "doc:2312#chunk:0"
+      ],
+      "confidence": 0.9
+    }
+  ],
+  "victims": [
+    {
+      "name": "Касангужинову Мурату Даулетовичу",
+      "dob": "04.12.1979",
+      "damage_tenge": 89000,
+      "doc_refs": [
+        "doc:2305#chunk:0"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "date": null,
+          "action": "",
+          "details": "",
+          "doc_refs": []
+        }
+      ],
+      "platform_accounts": [
+        {
+          "service": "",
+          "id": ""
+        }
+      ],
+      "_key": "name:Касангужинову Мурату Даулетовичу|dob:04.12.1979",
+      "_doc_ids": [
+        "2305"
+      ],
+      "transfers": [
+        {
+          "amount": 0,
+          "currency": "KZT",
+          "asset": null,
+          "via": null,
+          "to": "",
+          "bank": null,
+          "date": null,
+          "doc_refs": []
+        }
+      ],
+      "confidence": 0.0
+    },
+    {
+      "name": "Признать Касангужинова Мурата",
+      "dob": "04.12.1979",
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2305#chunk:0"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "date": null,
+          "action": "",
+          "details": "",
+          "doc_refs": []
+        }
+      ],
+      "platform_accounts": [
+        {
+          "service": "",
+          "id": ""
+        }
+      ],
+      "_key": "name:Признать Касангужинова Мурата|dob:04.12.1979",
+      "_doc_ids": [
+        "2305"
+      ],
+      "transfers": [
+        {
+          "amount": 0,
+          "currency": "KZT",
+          "asset": null,
+          "via": null,
+          "to": "",
+          "bank": null,
+          "date": null,
+          "doc_refs": []
+        }
+      ],
+      "confidence": 0.0
+    },
+    {
+      "name": "Касангужинову Мурату Даулетовичу",
+      "dob": null,
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2305#chunk:0"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "date": null,
+          "action": "",
+          "details": "",
+          "doc_refs": []
+        }
+      ],
+      "platform_accounts": [
+        {
+          "service": "",
+          "id": ""
+        }
+      ],
+      "_key": "name:Касангужинову Мурату Даулетовичу",
+      "_doc_ids": [
+        "2305"
+      ],
+      "transfers": [
+        {
+          "amount": 0,
+          "currency": "KZT",
+          "asset": null,
+          "via": null,
+          "to": "",
+          "bank": null,
+          "date": null,
+          "doc_refs": []
+        }
+      ],
+      "confidence": 0.0
+    },
+    {
+      "name": "Рамазанов Куаныш Темирбулатович",
+      "dob": "12.09.1994",
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2314#chunk:0",
+        "doc:2321#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Рамазанов Куаныш Темирбулатович|dob:12.09.1994",
+      "_doc_ids": [
+        "2314",
+        "2321"
+      ],
+      "transfers": [],
+      "confidence": 0.0
+    },
+    {
+      "name": "Алпыспаеве Минар Жумажановне",
+      "dob": "29.12.1963",
+      "damage_tenge": 186109,
+      "doc_refs": [
+        "doc:2314#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Алпыспаеве Минар Жумажановне|dob:29.12.1963",
+      "_doc_ids": [
+        "2314"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Признать Алпыспаеву Минар",
+      "dob": "29.12.1963",
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2314#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Признать Алпыспаеву Минар|dob:29.12.1963",
+      "_doc_ids": [
+        "2314"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Алпыспаеве Минар Жумажановне",
+      "dob": null,
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2314#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Алпыспаеве Минар Жумажановне",
+      "_doc_ids": [
+        "2314"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Саркиной Тлектес Касымовне",
+      "dob": "01.01.1962",
+      "damage_tenge": 184151,
+      "doc_refs": [
+        "doc:2321#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Саркиной Тлектес Касымовне|dob:01.01.1962",
+      "_doc_ids": [
+        "2321"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Саркине Тлектес Касымовне",
+      "dob": "01.01.1962",
+      "damage_tenge": 184151,
+      "doc_refs": [
+        "doc:2321#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Саркине Тлектес Касымовне|dob:01.01.1962",
+      "_doc_ids": [
+        "2321"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Признать Саркину Тлектес",
+      "dob": "01.01.1962",
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2321#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Признать Саркину Тлектес|dob:01.01.1962",
+      "_doc_ids": [
+        "2321"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Саркине Тлектес Касымовне",
+      "dob": null,
+      "damage_tenge": 0,
+      "doc_refs": [
+        "doc:2321#chunk:0"
+      ],
+      "steps": [],
+      "platform_accounts": [],
+      "_key": "name:Саркине Тлектес Касымовне",
+      "_doc_ids": [
+        "2321"
+      ],
+      "transfers": []
+    },
+    {
+      "name": "Kasanguziyev Muhammad Daudulotovich",
+      "iin": "791204350388",
+      "phone": "+77714309091",
+      "email": "",
+      "iban": "",
+      "tg": "",
+      "dob": "4 December 1979",
+      "address": "Pavlodar, ul. Akademika Chokina, d.155/5, kv.45",
+      "recruiter": "",
+      "ref_link": "",
+      "platform_accounts": [
+        {
+          "service": "",
+          "id": ""
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "date": null,
+          "action": "",
+          "details": "",
+          "doc_refs": [
+            "doc:2307#chunk:0",
+            "doc:2308#chunk:0",
+            "doc:2309#chunk:0",
+            "doc:2310#chunk:0",
+            "doc:2311#chunk:0"
+          ]
+        }
+      ],
+      "transfers": [
+        {
+          "amount": 0,
+          "currency": "KZT",
+          "asset": null,
+          "via": null,
+          "to": "",
+          "bank": null,
+          "date": null,
+          "doc_refs": []
+        }
+      ],
+      "damage_tenge": 89000,
+      "doc_refs": [
+        "doc:2309#chunk:0",
+        "doc:2305#chunk:0"
+      ],
+      "confidence": 0.0,
+      "_key": "iin:791204350388",
+      "_doc_ids": [
+        "2305",
+        "2309"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "type": "Investigation",
+      "date": "22 April 2025",
+      "desc": "Investigation of the case",
+      "doc_refs": [
+        "doc:2305#chunk:0",
+        "doc:2307#chunk:0",
+        "doc:2308#chunk:0",
+        "doc:2309#chunk:0",
+        "doc:2310#chunk:0",
+        "doc:2311#chunk:0",
+        "doc:2312#chunk:0"
+      ],
+      "confidence": 0.9
+    }
+  ],
+  "money_flows": [],
+  "pyramid_indicators": [
+    {
+      "indicator": "Financial pyramid",
+      "evidence": [
+        "doc:2307#chunk:0"
+      ],
+      "confidence": 0.9
+    }
+  ],
+  "mechanism_bullets": [
+    {
+      "order": 1,
+      "text": "The Department of Economic Investigations (DEIR) of Pavlodar Region conducts a criminal investigation, registered in the Unified Register of Criminal Investigations (ERDR), on the basis of the guidance of the financial (investment) pyramid project 'TAKORP'.",
+      "doc_refs": [
+        "doc:2307#chunk:0"
+      ]
+    },
+    {
+      "order": 2,
+      "text": "The investigation has been conducted on the basis of the material of the criminal investigation document number 255500121000018.",
+      "doc_refs": [
+        "doc:2305#chunk:0"
+      ]
+    },
+    {
+      "order": 3,
+      "text": "The investigation has been conducted on the basis of the material of the criminal investigation document number 255500121000018.",
+      "doc_refs": [
+        "doc:2308#chunk:0"
+      ]
+    },
+    {
+      "order": 4,
+      "text": "The investigation has been conducted on the basis of the material of the criminal investigation document number 255500121000018.",
+      "doc_refs": [
+        "doc:2309#chunk:0"
+      ]
+    },
+    {
+      "order": 5,
+      "text": "The investigation has been conducted on the basis of the material of the criminal investigation document number 255500121000018.",
+      "doc_refs": [
+        "doc:2310#chunk:0"
+      ]
+    },
+    {
+      "order": 6,
+      "text": "The investigation has been conducted on the basis of the material of the criminal investigation document number 255500121000018.",
+      "doc_refs": [
+        "doc:2311#chunk:0"
+      ]
+    },
+    {
+      "order": 7,
+      "text": "The investigation has been conducted on the basis of the material of the criminal investigation document number 255500121000018.",
+      "doc_refs": [
+        "doc:2312#chunk:0"
+      ]
+    }
+  ],
+  "offense_articles": [
+    {
+      "code": "UKR",
+      "article": "217",
+      "part": "1",
+      "point": "1",
+      "doc_refs": [
+        "doc:2307#chunk:0"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "code": "УК РК",
+      "article": "217",
+      "part": "2",
+      "point": "1",
+      "doc_refs": [
+        "doc:2305#chunk:0"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "code": "УК РК",
+      "article": "217",
+      "part": "2",
+      "point": "1",
+      "doc_refs": [],
+      "confidence": 0.0
+    }
+  ],
+  "contradictions": [],
+  "notes": []
+}
