@@ -1,55 +1,59 @@
+# app/main.py
+from __future__ import annotations
+
+import os
+import warnings
+import logging
+from datetime import date
+from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordBearer
-from app.core.weaviate_client import initialize_weaviate
-from app.routes import auth, cases, ml
-from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 import uvicorn
-import os
-import logging
-import warnings
-from app.core.weaviate_client import client, ensure_connection, ensure_schema
+
+from app.core.weaviate_client import (
+    connect as weaviate_connect,
+    ensure_schema as weaviate_ensure_schema,
+    close_client as weaviate_close,
+    is_connected as weaviate_is_connected,
+)
 from app.db.database import SessionLocal
 from app.models.user import User
 from app.models.cases import CaseModel
 from app.security.security import get_password_hash
-from datetime import date
+from app.routes import auth, cases, ml
 
-# 🔧 Загрузка переменных из .env
+# 🔧 env
 load_dotenv()
 
-# ⚠️ Отключаем ворнинги от protobuf
+# ⚠️ protobuf warning
 warnings.filterwarnings("ignore", message="Protobuf gencode version .* is exactly one major version older.*")
 
-# 🔍 Логирование
+# 🔍 logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# 🌐 FastAPI App
-app = FastAPI()
-
+# 🌐 FastAPI App (с lifespan сразу в конструкторе)
 def bootstrap_default_user_and_case():
     db = SessionLocal()
     try:
-        # Проверка есть ли пользователь "beka"
         user = db.query(User).filter_by(username="beka").first()
         if not user:
             user = User(
                 username="beka",
-                hashed_password=get_password_hash("2123")
+                hashed_password=get_password_hash("2123"),
             )
             db.add(user)
             db.commit()
             db.refresh(user)
             logger.info("👤 Создан юзер 'beka'")
 
-        # Если нет дела с case_number = CASE-001
         case = db.query(CaseModel).filter_by(case_number="CASE-001").first()
         if not case:
             case = CaseModel(
@@ -63,8 +67,8 @@ def bootstrap_default_user_and_case():
                 investigator="Серик Закиев",
                 registration_date=date(2025, 8, 1),
                 qualification="ст. 217 ч.1 п.1 УК РК",
-                damage_amount=2300000.50,
-                income_amount=750000.00,
+                damage_amount=2_300_000.50,
+                income_amount=750_000.00,
                 qualification_date=date(2025, 8, 2),
                 indictment_date=date(2025, 8, 12),
             )
@@ -73,21 +77,26 @@ def bootstrap_default_user_and_case():
             logger.info("📄 Создано дело 'CASE-001'")
     finally:
         db.close()
-from app.core.weaviate_client import client  # импортируй глобальный client
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🔄 Инициализация приложения...")
     try:
-        ensure_connection()
-        ensure_schema()
+        # 1) Weaviate up
+        weaviate_connect()
+        weaviate_ensure_schema()
+
+        # 2) Bootstrap demo data
         bootstrap_default_user_and_case()
+
         yield
     finally:
-        if client.is_connected():
-            logger.info("🧹 Закрываем Weaviate-соединение...")
-            client.close()
+        # Корректное закрытие при shutdown
+        if weaviate_is_connected():
+            weaviate_close()
         logger.info("🛑 Завершение работы приложения...")
-app.router.lifespan_context = lifespan
+
+app = FastAPI(lifespan=lifespan)
 
 # 🔒 OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
@@ -133,6 +142,7 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 if __name__ == "__main__":
-    host = os.getenv("BACKEND_HOST", "localhost")
+    host = os.getenv("BACKEND_HOST", "0.0.0.0")
     port = int(os.getenv("BACKEND_PORT", 8001))
+    # Важно: lifespan должен быть включен (по умолчанию on). reload=False в проде — ок.
     uvicorn.run("app.main:app", host=host, port=port, reload=False)
