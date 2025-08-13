@@ -88,14 +88,47 @@ async def upload_documents(
         raise HTTPException(status_code=500, detail="Ошибка сохранения в БД")
 
     return {"message": f"Загружено и проиндексировано {processed} документов"}
+import time,os
+
+# можно задать лимит логируемого payload через .env
+LOG_PAYLOAD_MAX = int(os.getenv("LOG_PAYLOAD_MAX", "20000"))  # 20k символов по умолчанию
 
 @router.get("/cases/{case_id}/prompt")
 async def generate_and_analyze_prompt(
     case_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
+    t0 = time.monotonic()
     logger.info(f"[RUN] start: case_id={case_id}, user_id={current_user.id}")
+
     validate_case(case_id, current_user.id, db)
-    res = await run_pipeline(case_id)
+
+    try:
+        res = await run_pipeline(case_id)
+    except Exception as e:
+        logger.exception(f"[RUN] failed: case_id={case_id}, user_id={current_user.id}")
+        raise
+
+    # красиво печатаем результат в консоль
+    try:
+        pretty = json.dumps(res, ensure_ascii=False, indent=2)
+    except Exception:
+        pretty = str(res)
+
+    total_len = len(pretty)
+    if total_len > LOG_PAYLOAD_MAX:
+        pretty_to_log = pretty[:LOG_PAYLOAD_MAX] + f"\n… [trimmed {total_len-LOG_PAYLOAD_MAX} chars]"
+    else:
+        pretty_to_log = pretty
+
+    dt = time.monotonic() - t0
+    logger.info(
+        "[DONE] case_id=%s user_id=%s time=%.3fs payload_len=%s\n%s",
+        case_id, current_user.id, dt, total_len, pretty_to_log
+    )
+
+    # если хочешь гарантированно увидеть в docker-логах даже при другой конфигурации логгера:
+    # print(f"[DONE] case_id={case_id} user_id={current_user.id} time={dt:.3f}s\n{pretty_to_log}", flush=True)
+
     return res
