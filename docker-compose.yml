@@ -43,14 +43,11 @@ services:
     build:
       context: ./layer-Front
       dockerfile: Dockerfile
-      args:
-        API_BASE: http://back:8000
-        NODE_ENV: production
-    container_name: frontend
-    restart: always
+    # Аргументы билда не обязательны, если передаёшь на runtime
+    # args:
+    #   API_BASE: http://back:8000
     environment:
-      # на всякий случай пробросим и в рантайме
-      API_BASE: http://back:8000
+      NUXT_PUBLIC_API_BASE: http://back:8000
       NODE_ENV: production
     depends_on:
       - back
@@ -61,6 +58,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+
 
   # (опционально) модель-эндпоинт, если нужен Ollama-подобный API
   # model:
