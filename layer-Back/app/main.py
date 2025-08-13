@@ -14,23 +14,18 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.security import OAuth2PasswordBearer
 import uvicorn
 
-from app.core.weaviate_client import (
-    connect as weaviate_connect,
-    ensure_schema as weaviate_ensure_schema,
-    close_client as weaviate_close,
-    is_connected as weaviate_is_connected,
-)
 from app.db.database import SessionLocal
 from app.models.user import User
 from app.models.cases import CaseModel
 from app.security.security import get_password_hash
-from app.routes import auth, cases, ml
+from app.routes import auth, cases, ml  # ⚠️ если внутри cases есть weaviate — см. примечание ниже
 
 # 🔧 env
 load_dotenv()
 
-# ⚠️ protobuf warning
+# ⚠️ подавляем шумные варнинги (оставлю как было)
 warnings.filterwarnings("ignore", message="Protobuf gencode version .* is exactly one major version older.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="passlib.utils")
 
 # 🔍 logging
 logging.basicConfig(
@@ -39,16 +34,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 🌐 FastAPI App (с lifespan сразу в конструкторе)
 def bootstrap_default_user_and_case():
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(username="beka").first()
         if not user:
-            user = User(
-                username="beka",
-                hashed_password=get_password_hash("2123"),
-            )
+            user = User(username="beka", hashed_password=get_password_hash("2123"))
             db.add(user)
             db.commit()
             db.refresh(user)
@@ -80,20 +71,12 @@ def bootstrap_default_user_and_case():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🔄 Инициализация приложения...")
+    logger.info("🔄 Инициализация приложения (без Weaviate)...")
+    # старт
+    bootstrap_default_user_and_case()
     try:
-        # 1) Weaviate up
-        weaviate_connect()
-        weaviate_ensure_schema()
-
-        # 2) Bootstrap demo data
-        bootstrap_default_user_and_case()
-
         yield
     finally:
-        # Корректное закрытие при shutdown
-        if weaviate_is_connected():
-            weaviate_close()
         logger.info("🛑 Завершение работы приложения...")
 
 app = FastAPI(lifespan=lifespan)
@@ -103,7 +86,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 # 📆 Роуты
 app.include_router(auth.router, tags=["Auth"])
-app.include_router(cases.router, tags=["Cases"])
+app.include_router(cases.router, tags=["Cases"])  # см. примечание ниже
 app.include_router(ml.router, tags=["ML"])
 
 # 🌍 CORS
@@ -127,11 +110,7 @@ def custom_openapi():
         routes=app.routes,
     )
     openapi_schema["components"]["securitySchemes"] = {
-        "OAuth2PasswordBearer": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-        }
+        "OAuth2PasswordBearer": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
     }
     for path in openapi_schema["paths"]:
         for method in openapi_schema["paths"][path]:
@@ -144,5 +123,4 @@ app.openapi = custom_openapi
 if __name__ == "__main__":
     host = os.getenv("BACKEND_HOST", "0.0.0.0")
     port = int(os.getenv("BACKEND_PORT", 8001))
-    # Важно: lifespan должен быть включен (по умолчанию on). reload=False в проде — ок.
     uvicorn.run("app.main:app", host=host, port=port, reload=False)
