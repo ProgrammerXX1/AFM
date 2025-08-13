@@ -11,6 +11,12 @@ import os
 import logging
 import warnings
 
+from app.db.database import SessionLocal
+from app.models.user import User
+from app.models.case import CaseModel
+from app.security.hashing import get_password_hash
+from datetime import date
+
 # 🔧 Загрузка переменных из .env
 load_dotenv()
 
@@ -25,25 +31,68 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 🌐 FastAPI App с Lifecycle
+# 🌐 FastAPI App
 app = FastAPI()
+
+def bootstrap_default_user_and_case():
+    db = SessionLocal()
+    try:
+        # Проверка есть ли пользователь "beka"
+        user = db.query(User).filter_by(username="beka").first()
+        if not user:
+            user = User(
+                username="beka",
+                hashed_password=get_password_hash("2123")
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logger.info("👤 Создан юзер 'beka'")
+
+        # Если нет дела с case_number = CASE-001
+        case = db.query(CaseModel).filter_by(case_number="CASE-001").first()
+        if not case:
+            case = CaseModel(
+                case_number="CASE-001",
+                user_id=user.id,
+                surname="Исенов",
+                name="Дастан",
+                patronymic="Бекболатович",
+                iin="990123456789",
+                organization="ДЕРА Павлодар",
+                investigator="Серик Закиев",
+                registration_date=date(2025, 8, 1),
+                qualification="ст. 217 ч.1 п.1 УК РК",
+                damage_amount=2300000.50,
+                income_amount=750000.00,
+                qualification_date=date(2025, 8, 2),
+                indictment_date=date(2025, 8, 12),
+            )
+            db.add(case)
+            db.commit()
+            logger.info("📄 Создано дело 'CASE-001'")
+    finally:
+        db.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🔄 Инициализация приложения...")
     initialize_weaviate()
+    bootstrap_default_user_and_case()  # Здесь создание
     yield
-    logger.info("🛑 Завершение работы приложения...")
+    logger.info("🔝 Завершение работы приложения...")
 
-# 🔒 Авторизация
+app.router.lifespan_context = lifespan
+
+# 🔒 OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
-# 📦 Подключаем роуты
+# 📆 Роуты
 app.include_router(auth.router, tags=["Auth"])
 app.include_router(cases.router, tags=["Cases"])
 app.include_router(ml.router, tags=["ML"])
 
-# 🌍 CORS из .env
+# 🌍 CORS
 cors_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -53,7 +102,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔐 Swagger с авторизацией
+# 🔐 Swagger + Bearer Auth
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -78,7 +127,6 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-# 🚀 Запуск
 if __name__ == "__main__":
     host = os.getenv("BACKEND_HOST", "localhost")
     port = int(os.getenv("BACKEND_PORT", 8001))
