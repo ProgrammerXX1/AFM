@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   ssr: true, // можно оставить true, если защищаешь доступ к FormData через `process.client`
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:8001'
+      apiBase: process.env.API_BASE
     }
   },
   vite: {
@@ -13,5 +13,8 @@ export default defineNuxtConfig({
       noExternal: ['axios']
     }
   },
-  
+  devServer: {
+    host: '0.0.0.0',
+    port: 3000, // не обязательно, если и так 3000
+  }
 })

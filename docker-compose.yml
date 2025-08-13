@@ -29,7 +29,6 @@ services:
       - ./layer-Back/.env
     environment:
       # дублируем на случай, если в .env забудете
-      DATABASE_URL: postgresql+psycopg://postgres:2123@db:5432/layer
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONPATH: /app
