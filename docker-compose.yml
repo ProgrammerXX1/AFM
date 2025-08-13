@@ -46,7 +46,6 @@ services:
     environment:
       NUXT_HOST: 0.0.0.0
       NUXT_PORT: 3000
-      NUXT_PUBLIC_API_BASE: "http://back:8000"
 
 volumes:
   postgres_data:
