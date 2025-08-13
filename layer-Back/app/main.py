@@ -73,14 +73,15 @@ def bootstrap_default_user_and_case():
             logger.info("📄 Создано дело 'CASE-001'")
     finally:
         db.close()
-
+from app.core.weaviate_client import client  # импортируй глобальный client
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🔄 Инициализация приложения...")
     initialize_weaviate()
-    bootstrap_default_user_and_case()  # Здесь создание
+    bootstrap_default_user_and_case()
     yield
-    logger.info("🔝 Завершение работы приложения...")
+    logger.info("🛑 Завершение работы приложения...")
+    client.close()  # 💥 Закрываем weaviate-клиент
 
 app.router.lifespan_context = lifespan
 
