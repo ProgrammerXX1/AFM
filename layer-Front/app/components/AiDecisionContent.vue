@@ -17,9 +17,9 @@
         <span class="muted" v-if="copied">— скопировано!</span>
       </div>
 
-      <!-- Если пришла строка — как есть -->
+      <!-- Строка — как есть -->
       <pre v-if="isString" class="dump">{{ String(rawData) }}</pre>
-      <!-- Если пришёл JSON (объект/массив) — pretty-print -->
+      <!-- Объект/массив — pretty JSON -->
       <pre v-else class="dump">{{ prettyText }}</pre>
     </div>
   </main>
@@ -30,9 +30,13 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useRuntimeConfig } from '#app'
 
+definePageMeta({
+  middleware: ['auth'] // ← запускаем твой middleware на этой странице
+})
+
 const route = useRoute()
 const config = useRuntimeConfig()
-const { $fetch } = useNuxtApp() // ✅ берём $fetch из плагина (с Authorization)
+const { $fetch } = useNuxtApp() // ← твой плагин с Authorization
 
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -41,8 +45,8 @@ const copied = ref(false)
 
 const caseId = computed(() => String(route.params.case_id ?? '1'))
 
-onMounted(load)
-watch(() => caseId.value, load)
+onMounted(() => { void load() })
+watch(() => caseId.value, () => { void load() })
 
 async function load () {
   isLoading.value = true
@@ -51,7 +55,10 @@ async function load () {
   copied.value = false
 
   try {
-    // ✅ GET /cases/{case_id}/prompt — токен подставит твой fetch.client.ts
+    // дождёмся токена (защита от гонки при входе)
+    await ensureTokenReady()
+
+    // GET /cases/{case_id}/prompt — токен подставит fetch.client.ts
     const res = await $fetch<any>(`/cases/${caseId.value}/prompt`, {
       baseURL: config.public.apiBase,
       method: 'GET'
@@ -66,27 +73,21 @@ async function load () {
       e?.status ||
       'Неизвестная ошибка'
     errorMessage.value = `❌ Ошибка загрузки данных: ${msg}`
-    // покажем сырой ответ если есть
-    if (e?.response?._data) {
-      rawData.value = e.response._data
-    }
+    if (e?.response?._data) rawData.value = e.response._data
   } finally {
     isLoading.value = false
   }
 }
 
 function reload () {
-  load()
+  void load()
 }
 
 const isString = computed(() => typeof rawData.value === 'string')
 const prettyText = computed(() => {
   if (isString.value) return String(rawData.value)
-  try {
-    return JSON.stringify(rawData.value, null, 2)
-  } catch {
-    return String(rawData.value)
-  }
+  try { return JSON.stringify(rawData.value, null, 2) }
+  catch { return String(rawData.value) }
 })
 
 const byteSize = computed(() => {
@@ -96,9 +97,7 @@ const byteSize = computed(() => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  } catch {
-    return ''
-  }
+  } catch { return '' }
 })
 
 async function copyToClipboard () {
@@ -108,6 +107,20 @@ async function copyToClipboard () {
     setTimeout(() => (copied.value = false), 1500)
   } catch (e) {
     console.warn('Не удалось скопировать', e)
+  }
+}
+
+/** Ждём появления токена в localStorage перед запросом */
+function getToken(): string | null {
+  try { return localStorage.getItem('token') } catch { return null }
+}
+async function ensureTokenReady() {
+  if (getToken()) return
+  // короткий, но надёжный цикл ожидания (на случай, если логин только что записал токен)
+  let tries = 0
+  while (!getToken() && tries < 40) {
+    await new Promise(r => setTimeout(r, 25))
+    tries++
   }
 }
 </script>
