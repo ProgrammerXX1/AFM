@@ -1,27 +1,25 @@
 # ⚙️ Базовый образ
 FROM python:3.11-slim
 
-# 📍 Устанавливаем рабочую директорию
-WORKDIR /app
-
-# ✅ Копируем только файл зависимостей для установки
-COPY requirements.txt .
-
-# 🧱 Устанавливаем зависимости отдельно — будет кешироваться
-RUN apt-get update && apt-get install -y \
-    gcc \
-    build-essential \
-    libffi-dev \
-    libpq-dev \
-    libmupdf-dev \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apt-get remove -y gcc build-essential \
-    && apt-get autoremove -y \
-    && apt-get clean \
+# системные зависимости для psycopg2, cryptography, pymupdf
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc build-essential libffi-dev libpq-dev libmupdf-dev wget \
     && rm -rf /var/lib/apt/lists/*
 
-# ✅ Только теперь копируем оставшийся код (возможно изменяется часто)
+WORKDIR /app
+
+# сначала зависимости (кешируется)
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# теперь код
 COPY . .
 
-# 🚀 Запуск приложения
+# на всякий — выставим PYTHONPATH
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# 👇 ВАЖНО: если ваш main лежит в app/main.py — оставляем app.main:app
+# если файл на корне layer-Back/main.py — меняйте на main:app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

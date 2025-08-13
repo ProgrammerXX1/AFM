@@ -13,6 +13,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d layer"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   back:
     build:
@@ -20,10 +25,17 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     restart: always
+    env_file:
+      - ./layer-Back/.env
     environment:
+      # дублируем на случай, если в .env забудете
       DATABASE_URL: postgresql+psycopg://postgres:2123@db:5432/layer
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONPATH: /app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
 
@@ -31,12 +43,35 @@ services:
     build:
       context: ./layer-Front
       dockerfile: Dockerfile
+      args:
+        API_BASE: http://back:8000
+        NODE_ENV: production
     container_name: frontend
     restart: always
+    environment:
+      # на всякий случай пробросим и в рантайме
+      API_BASE: http://back:8000
+      NODE_ENV: production
     depends_on:
       - back
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # (опционально) модель-эндпоинт, если нужен Ollama-подобный API
+  # model:
+  #   image: ollama/ollama:latest
+  #   container_name: model
+  #   restart: always
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama:/root/.ollama
 
 volumes:
   postgres_data:
+  # ollama:
