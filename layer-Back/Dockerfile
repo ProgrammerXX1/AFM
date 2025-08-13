@@ -22,4 +22,4 @@ ENV PYTHONPATH=/app \
 
 # 👇 ВАЖНО: если ваш main лежит в app/main.py — оставляем app.main:app
 # если файл на корне layer-Back/main.py — меняйте на main:app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
