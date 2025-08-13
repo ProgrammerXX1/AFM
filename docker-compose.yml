@@ -38,15 +38,15 @@ services:
     ports:
       - "8000:8000"
 
-    frontend:
-      build:
-        context: ./layer-front
-        dockerfile: Dockerfile
-      ports:
-        - "80:3000"  # 👈 это обязательно!
-      environment:
-        NUXT_HOST: 0.0.0.0
-        NUXT_PORT: 3000
+  frontend:
+    build:
+      context: ./layer-front
+      dockerfile: Dockerfile
+    ports:
+      - "80:3000"  # 👈 это обязательно!
+    environment:
+      NUXT_HOST: 0.0.0.0
+      NUXT_PORT: 3000
 
 
   # (опционально) модель-эндпоинт, если нужен Ollama-подобный API
