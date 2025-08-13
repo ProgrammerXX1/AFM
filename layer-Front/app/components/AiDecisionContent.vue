@@ -17,9 +17,8 @@
         <span class="muted" v-if="copied">— скопировано!</span>
       </div>
 
-      <!-- Если пришла строка — покажем как есть -->
+      <!-- Если пришла строка — как есть -->
       <pre v-if="isString" class="dump">{{ String(rawData) }}</pre>
-
       <!-- Если пришёл JSON (объект/массив) — pretty-print -->
       <pre v-else class="dump">{{ prettyText }}</pre>
     </div>
@@ -29,11 +28,11 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { $fetch } from 'ofetch'
 import { useRuntimeConfig } from '#app'
 
-const config = useRuntimeConfig()
 const route = useRoute()
+const config = useRuntimeConfig()
+const { $fetch } = useNuxtApp() // ✅ берём $fetch из плагина (с Authorization)
 
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -52,17 +51,25 @@ async function load () {
   copied.value = false
 
   try {
-    // ✅ Берём из твоего роутера: GET /cases/{case_id}/prompt
+    // ✅ GET /cases/{case_id}/prompt — токен подставит твой fetch.client.ts
     const res = await $fetch<any>(`/cases/${caseId.value}/prompt`, {
       baseURL: config.public.apiBase,
-      method: 'GET',
-      credentials: 'include', // если auth через cookie
+      method: 'GET'
     })
     rawData.value = res
   } catch (e: any) {
     console.error('❌ Ошибка загрузки:', e)
-    const msg = e?.response?._data?.detail || e?.message || e?.status || 'Неизвестная ошибка'
+    const msg =
+      e?.response?._data?.detail ||
+      e?.statusText ||
+      e?.message ||
+      e?.status ||
+      'Неизвестная ошибка'
     errorMessage.value = `❌ Ошибка загрузки данных: ${msg}`
+    // покажем сырой ответ если есть
+    if (e?.response?._data) {
+      rawData.value = e.response._data
+    }
   } finally {
     isLoading.value = false
   }
