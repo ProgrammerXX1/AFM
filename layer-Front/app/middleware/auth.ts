@@ -1,12 +1,9 @@
-type User = {
-  id: number
-  username: string
-}
+// middleware/auth.ts
+type User = { id: number; username: string }
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const config = useRuntimeConfig()
-
-  const publicPages = ['/', '/logout', '/register']
+  const publicPages = ['/', '/logout', '/register', '/login']
   const isPublic = publicPages.includes(to.path)
 
   if (process.server) return
@@ -16,19 +13,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (!token && !isPublic) {
     return navigateTo('/logout')
   }
-
-  // Не запрашиваем /me на публичных страницах
   if (!token || isPublic) return
 
   try {
-    const res = await $fetch<User>('/me', {
+    // важное: baseURL обязателен, иначе пойдёт на фронтенд-хост
+    const me = await $fetch<User>('/me', {
       baseURL: config.public.apiBase,
+      // заголовок сейчас поставит наш плагин, но дублировать не вредно:
       headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+      // небольшой таймаут, чтобы страница не висла
+      timeout: 15000,
     })
-
-    if (!res?.username) throw new Error('Invalid user')
+    if (!me?.username) throw new Error('Invalid user')
   } catch (err) {
-    console.warn('❌ Токен истёк, редиректим...')
+    console.warn('❌ Токен истёк/невалиден — уводим на /logout')
     localStorage.removeItem('token')
     return navigateTo('/logout')
   }
