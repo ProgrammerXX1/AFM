@@ -14,9 +14,6 @@ from weaviate.classes.config import Configure, Property, DataType, VectorDistanc
 
 logger = logging.getLogger(__name__)
 
-# -----------------------------
-# Ленивая инициализация клиента
-# -----------------------------
 _CLIENT: Optional[WeaviateClient] = None
 
 def _str_to_bool(value: str) -> bool:
@@ -32,36 +29,29 @@ def _build_client() -> WeaviateClient:
             grpc_port=int(os.getenv("WEAVIATE_GRPC_PORT", 50051)),
             grpc_secure=_str_to_bool(os.getenv("WEAVIATE_GRPC_SECURE", "false")),
         ),
-        additional_config=AdditionalConfig(
-            grpc=True,
-            timeout=Timeout(init=10)
-        ),
+        additional_config=AdditionalConfig(grpc=True, timeout=Timeout(init=10)),
         skip_init_checks=True,
     )
 
 def get_client() -> WeaviateClient:
-    """Вернуть singleton клиента (без подключения)."""
     global _CLIENT
     if _CLIENT is None:
         _CLIENT = _build_client()
     return _CLIENT
 
 def connect() -> None:
-    """Гарантированно подключиться (идемпотентно)."""
     c = get_client()
     if not c.is_connected():
         logger.info("🔌 Подключение к Weaviate...")
         c.connect()
 
 def is_connected() -> bool:
-    c = get_client()
     try:
-        return c.is_connected()
+        return get_client().is_connected()
     except Exception:
         return False
 
 def close_client() -> None:
-    """Закрыть соединение (идемпотентно)."""
     global _CLIENT
     if _CLIENT is None:
         return
@@ -71,17 +61,25 @@ def close_client() -> None:
             _CLIENT.close()
     except Exception as e:
         logger.warning(f"⚠️ Ошибка при закрытии Weaviate: {e}")
-    # Не обнуляем _CLIENT, чтобы повторные вызовы не создавали новый экземпляр в atexit
-    # Если хочется — можно обнулить: _CLIENT = None
 
-# На случай «жёсткого» выхода процесса без shutdown-события
 atexit.register(close_client)
 
-# -------------------------------------------------
-# Схема и операции (используют ленивый singleton)
-# -------------------------------------------------
+# 🔁 Back-compat shim: старый импорт `from ... import client` будет работать
+class _ClientProxy:
+    def __getattr__(self, name):
+        # авто-коннект при первом обращении
+        connect()
+        return getattr(get_client(), name)
+    def __repr__(self):
+        return "<WeaviateClientProxy (lazy)>"
+
+client = _ClientProxy()  # ← добавлено
+
+# также оставим совместимое имя, если где-то вызывается ensure_connection()
+def ensure_connection() -> None:  # ← добавлено
+    connect()
+
 def ensure_schema() -> None:
-    """Проверка и создание схемы 'Document' в Weaviate."""
     connect()
     try:
         existing = get_client().collections.list_all()
@@ -128,13 +126,11 @@ def save_to_weaviate(
     chunk_subtype: str | None = None,
     source_page: int | None = None,
 ) -> str:
-    """Сохранение чанка в Weaviate с расширенными метаданными."""
     connect()
     try:
         doc_uuid = str(uuid.uuid4())
         collection = get_client().collections.get("Document")
-
-        properties = {
+        props = {
             "title": title,
             "text": text,
             "filetype": filetype,
@@ -146,19 +142,13 @@ def save_to_weaviate(
             "hash": hash,
         }
         if chunk_subtype:
-            properties["chunk_subtype"] = chunk_subtype
+            props["chunk_subtype"] = chunk_subtype
         if source_page is not None:
-            properties["source_page"] = source_page
+            props["source_page"] = source_page
 
-        collection.data.insert(
-            uuid=doc_uuid,
-            properties=properties,
-            vector=vector,
-        )
-
+        collection.data.insert(uuid=doc_uuid, properties=props, vector=vector)
         logger.info(f"✅ Чанк сохранён в Weaviate: UUID={doc_uuid}")
         return doc_uuid
-
     except Exception as e:
         logger.error(f"❌ Ошибка при сохранении чанка в Weaviate: {str(e)}")
         raise
