@@ -13,8 +13,8 @@ import warnings
 
 from app.db.database import SessionLocal
 from app.models.user import User
-from app.models.case import CaseModel
-from app.security.hashing import get_password_hash
+from app.models.cases import CaseModel
+from app.security.security import get_password_hash
 from datetime import date
 
 # 🔧 Загрузка переменных из .env
