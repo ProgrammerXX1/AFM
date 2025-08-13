@@ -4,6 +4,7 @@ sqlalchemy
 psycopg2-binary
 passlib[bcrypt]
 python-dotenv
+python-jose[cryptography]
 python-multipart
 pymupdf
 python-dotenv
