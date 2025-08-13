@@ -10,7 +10,7 @@ import uvicorn
 import os
 import logging
 import warnings
-
+from app.core.weaviate_client import client, ensure_connection, ensure_schema
 from app.db.database import SessionLocal
 from app.models.user import User
 from app.models.cases import CaseModel
@@ -77,12 +77,16 @@ from app.core.weaviate_client import client  # импортируй глобал
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🔄 Инициализация приложения...")
-    initialize_weaviate()
-    bootstrap_default_user_and_case()
-    yield
-    logger.info("🛑 Завершение работы приложения...")
-    client.close()  # 💥 Закрываем weaviate-клиент
-
+    try:
+        ensure_connection()
+        ensure_schema()
+        bootstrap_default_user_and_case()
+        yield
+    finally:
+        if client.is_connected():
+            logger.info("🧹 Закрываем Weaviate-соединение...")
+            client.close()
+        logger.info("🛑 Завершение работы приложения...")
 app.router.lifespan_context = lifespan
 
 # 🔒 OAuth2
