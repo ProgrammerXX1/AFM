@@ -26,7 +26,7 @@ services:
     container_name: backend
     restart: always
     env_file:
-      - ./layer-back/.env
+      - ./layer-Back/.env
     environment:
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"

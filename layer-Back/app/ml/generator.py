@@ -25,12 +25,60 @@ _BANNED_PATTERNS = re.compile(
     r"я\s+не\s+смогу|к\s+сожалению|не\s+удалось|привет[,! ]|hello[,! ]|hi[,! ])",
     re.IGNORECASE
 )
+# --- ADD near imports ---
+from typing import Any, Dict
+# --- END ADD ---
+
+def _extract_text(data: Dict[str, Any]) -> str:
+    """
+    Унифицируем разные форматы ответов:
+    - OpenAI chat: choices[0].message.content
+    - OpenAI completions: choices[0].text
+    - кастом/llama.cpp: content / response / text
+    """
+    if not isinstance(data, dict):
+        return ""
+    # OpenAI chat
+    try:
+        return data["choices"][0]["message"]["content"]
+    except Exception:
+        pass
+    # OpenAI completions
+    try:
+        return data["choices"][0]["text"]
+    except Exception:
+        pass
+    # Кастомные ключи
+    return data.get("content") or data.get("response") or data.get("text", "") or ""
 
 async def call_generator(prompt: str, n_predict: int):
     """
-    Низкоуровневый вызов модели (vLLM/OpenAI-совместимый endpoint).
+    Умный вызов генератора: поддержка OpenAI /v1/chat/completions,
+/v1/completions и llama.cpp-подобных серверов.
+    Сначала пытаемся «по URL», при 400 — пробуем другие схемы.
     """
-    payload = {
+    url = GENERATOR_URL
+
+    # Схемы тел
+    payload_chat = {
+        "model": GENERATOR_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": n_predict,
+        "temperature": _DEFAULT_TEMP,
+        "top_p": _DEFAULT_TOP_P,
+        "stream": False,
+        "stop": _DEFAULT_STOPS,
+    }
+    payload_comp = {
+        "model": GENERATOR_MODEL,
+        "prompt": prompt,
+        "max_tokens": n_predict,
+        "temperature": _DEFAULT_TEMP,
+        "top_p": _DEFAULT_TOP_P,
+        "stream": False,
+        "stop": _DEFAULT_STOPS,
+    }
+    payload_llama = {
         "model": GENERATOR_MODEL,
         "prompt": prompt,
         "n_predict": n_predict,
@@ -40,12 +88,46 @@ async def call_generator(prompt: str, n_predict: int):
         "stream": False,
         "stop": _DEFAULT_STOPS,
     }
+
+    # Порядок попыток по эвристике URL
+    attempts = []
+    u = (url or "").lower()
+    if "/chat/completions" in u:
+        attempts = [("openai-chat", payload_chat), ("openai-comp", payload_comp), ("llama", payload_llama)]
+    elif "/completions" in u:
+        attempts = [("openai-comp", payload_comp), ("openai-chat", payload_chat), ("llama", payload_llama)]
+    else:
+        attempts = [("llama", payload_llama), ("openai-chat", payload_chat), ("openai-comp", payload_comp)]
+
     async with httpx.AsyncClient(timeout=240.0) as client:
-        r = await client.post(GENERATOR_URL, json=payload)
-        r.raise_for_status()
-        data = r.json()
-        # разные провайдеры возвращают разный ключ
-        return data.get("content") or data.get("response") or data.get("text", "") or ""
+        last_exc: Optional[Exception] = None
+        for label, pl in attempts:
+            try:
+                r = await client.post(url, json=pl)
+                r.raise_for_status()
+                data = r.json()
+                return _extract_text(data)
+            except HTTPStatusError as e:
+                # При явной 400 — пробуем следующую схему
+                if e.response is not None and e.response.status_code == 400:
+                    try:
+                        err_txt = e.response.text[:500]
+                    except Exception:
+                        err_txt = str(e)
+                    logger.warning(f"[GEN] {label} -> HTTP 400, retry with next schema; body: {err_txt}")
+                    last_exc = e
+                    continue
+                last_exc = e
+                break
+            except Exception as e:
+                logger.warning(f"[GEN] transport/parse error on {label}: {e}")
+                last_exc = e
+                continue
+
+        # Если всё перепробовали
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("Generator: no attempts executed (invalid configuration)")
 
 async def _try_once(label: str, prompt: str, n_predict: int, retries: int = 3) -> str:
     delay = 1.0
