@@ -21,9 +21,9 @@ services:
 
   back:
     build:
-      context: ./layer-back
+      context: ./layer-Back
       dockerfile: Dockerfile
-    container_name: backend
+    container_name: Backend
     restart: always
     env_file:
       - ./layer-Back/.env
@@ -39,7 +39,7 @@ services:
 
   frontend:
     build:
-      context: ./layer-front
+      context: ./layer-Front
       dockerfile: Dockerfile
     ports:
       - "80:3000"  # 👈 это обязательно!
